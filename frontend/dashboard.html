@@ -1,0 +1,192 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rudra Paithani Yeola | User Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { position: relative; }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 900px;
+            height: 900px;
+            background-image: url('images/logo.png');
+            background-size: 90%;
+            background-repeat: no-repeat;
+            background-position: center center;
+            opacity: 0.08;
+            z-index: 0;
+            pointer-events: none;
+        }
+        header, main, footer { position: relative; z-index: 1; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-top">
+        </div>
+        <div class="header-main">
+            <div class="logo">
+                <img src="images/logo.png" alt="Rudra Paithani Yeola Logo">
+                <h1>Rudra Paithani</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="products.html">Products</a></li>
+                    <li><a href="about.html">About</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+<li><a href="dashboard.html" class="active">Dashboard</a></li>
+                </ul>
+            </nav>
+            <div class="header-cart">
+                <a href="profile.html" class="nav-profile-link" aria-label="User Profile" data-profile-link>
+                    <span class="nav-profile-icon">&#128100;</span>
+                </a>
+                <a href="cart.html" class="nav-cart-link" aria-label="Cart">
+                    <span class="nav-cart-icon">&#128722;</span>
+                    <span class="nav-cart-badge" data-cart-count>0</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="user-dashboard">
+        <section class="dashboard-hero">
+            <div>
+                <p class="dashboard-label">Welcome back</p>
+                <h2><span data-user-name>User</span></h2>
+                <p class="dashboard-subtitle">Track your current orders, review previous purchases, and manage your personal details.</p>
+            </div>
+            <div class="dashboard-avatar" data-user-initials aria-hidden="true">U</div>
+        </section>
+
+        <section class="dashboard-kpis">
+            <div class="dashboard-card">
+                <p>Current Orders</p>
+                <h3 data-current-count>0</h3>
+                <span>No current orders yet</span>
+            </div>
+            <div class="dashboard-card">
+                <p>Previous Orders</p>
+                <h3 data-previous-count>0</h3>
+                <span>No previous orders yet</span>
+            </div>
+            <div class="dashboard-card">
+                <p>Saved Address</p>
+                <h3 data-address-city>Not set</h3>
+                <span>Default shipping address</span>
+            </div>
+        </section>
+
+        <section class="dashboard-grid">
+            <div class="dashboard-panel">
+                <div class="panel-header">
+                    <h3>Current Orders</h3>
+                    <span class="panel-tag">Live updates</span>
+                </div>
+                <div class="order-empty">You do not have any current orders.</div>
+                <button class="btn-small" id="current-orders-btn" disabled>Track Orders</button>
+            </div>
+
+            <div class="dashboard-panel">
+                <div class="panel-header">
+                    <h3>Previous Orders</h3>
+                    <span class="panel-tag">History</span>
+                </div>
+                <div class="order-empty">No previous order records right now.</div>
+                <button class="btn-small" id="previous-orders-btn" disabled>View All Orders</button>
+            </div>
+
+            <div class="dashboard-panel dashboard-details">
+                <div class="panel-header">
+                    <h3>Personal Details</h3>
+                    <span class="panel-tag">Profile</span>
+                </div>
+                <div class="detail-row">
+                    <span>Name</span>
+                    <strong><span data-user-name>User</span></strong>
+                </div>
+                <div class="detail-row">
+                    <span>Email</span>
+                    <strong><span data-user-email>Not set</span></strong>
+                </div>
+                <div class="detail-row">
+                    <span>Phone</span>
+                    <strong><span data-user-phone>Not set</span></strong>
+                </div>
+                <div class="detail-row">
+                    <span>Default Address</span>
+                    <strong><span data-user-address>Not set</span></strong>
+                </div>
+
+                <div class="profile-editor">
+                    <h4>Edit Profile</h4>
+                    <form id="profile-form">
+                        <label for="profile-name">Full Name</label>
+                        <input type="text" id="profile-name" placeholder="Enter your name">
+
+                        <label for="profile-email">Email</label>
+                        <input type="email" id="profile-email" placeholder="Enter your email" readonly>
+
+                        <label for="profile-phone">Phone</label>
+                        <input type="tel" id="profile-phone" placeholder="Enter your phone">
+
+                        <label for="profile-address">Address</label>
+                        <textarea id="profile-address" rows="3" placeholder="Saved in your profile" readonly></textarea>
+
+                        <button type="submit" class="btn-primary">Save Details</button>
+                        <p class="profile-note" id="profile-save-note">Name and phone are saved to your account. Manage addresses in Profile.</p>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-info">
+                <p>Email: <a href="https://mail.google.com/mail/?view=cm&fs=1&to=paithanisareewebsite@gmail.com" target="_blank" rel="noopener noreferrer">paithanisareewebsite@gmail.com</a></p>
+                <p>Reach us: Yeola, Nashik, Maharashtra - 423401</p>
+                <p>Phone: +91 9860655387</p>
+                        </div>
+            <div class="footer-links">
+                <a href="terms.html">Terms of Service</a>
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="care-guide.html">Paithani Care Guide</a>
+                <a href="return-refund.html">Return & Refund</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/script.js?v=20260327"></script>
+    <script src="js/dashboard.js?v=20260327"></script>
+    <script src="js/back-button.js"></script>
+    <script src="js/whatsapp-chat.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

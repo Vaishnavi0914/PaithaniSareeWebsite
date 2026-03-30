@@ -1,0 +1,793 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Details | Rudra Paithani Yeola</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        .product-details-container {
+            display: grid;
+            grid-template-columns: minmax(0, 520px) minmax(0, 1fr);
+            gap: 32px;
+            padding: 34px 6%;
+            background-color: var(--secondary-cream);
+            min-height: 80vh;
+            align-items: start;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .product-image-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+            position: static;
+        }
+
+        .zoom-container {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            border-radius: 14px;
+            background-color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            aspect-ratio: 3 / 4;
+        }
+
+        #zoom-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: zoom-in;
+            transition: transform 0.3s ease;
+        }
+
+        #zoom-image.zoomed {
+            cursor: zoom-out;
+            transform: scale(1.5);
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .zoom-btn {
+            padding: 8px 16px;
+            background: var(--primary-maroon);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s ease;
+            flex: 1 1 auto;
+            min-width: 120px;
+        }
+
+        .zoom-btn:hover {
+            background: var(--accent-gold);
+            color: var(--primary-maroon);
+        }
+
+        .product-info-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 20px;
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            height: fit-content;
+            width: 100%;
+            max-height: var(--product-info-max, none);
+            overflow-y: auto;
+        }
+
+        .product-info-section::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .product-info-section::-webkit-scrollbar-thumb {
+            background: rgba(197, 160, 89, 0.6);
+            border-radius: 999px;
+        }
+
+        .product-info-section::-webkit-scrollbar-track {
+            background: rgba(197, 160, 89, 0.12);
+        }
+
+        .product-info-section h1 {
+            font-family: var(--font-main);
+            font-size: 32px;
+            color: var(--primary-maroon);
+            margin: 0;
+        }
+
+        .product-price {
+            font-size: 28px;
+            color: var(--accent-gold);
+            font-weight: 700;
+            border-bottom: 2px solid var(--accent-gold);
+            padding-bottom: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .product-description {
+            font-size: 14px;
+            color: var(--text-dark);
+            line-height: 1.8;
+        }
+
+        .product-info-block {
+            border-top: 1px solid #f0e0c3;
+            padding-top: 16px;
+        }
+
+        .product-info-block h3 {
+            margin: 0 0 12px;
+            font-size: 18px;
+            color: var(--primary-maroon);
+        }
+
+        .product-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px 16px;
+        }
+
+        .product-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 10px 12px;
+            background: #fffaf2;
+            border: 1px solid #f1e1c2;
+            border-radius: 8px;
+        }
+
+        .product-info-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #8c6b35;
+            font-weight: 600;
+        }
+
+        .product-info-value {
+            font-size: 14px;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        .feedback-section {
+            border-top: 1px solid #f0e0c3;
+            padding-top: 16px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .feedback-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .star-rating {
+            display: inline-flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .star-btn {
+            border: 1px solid #f1e1c2;
+            background: #fffaf2;
+            color: #c4b299;
+            font-size: 20px;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .star-btn.is-active,
+        .star-btn.is-hover {
+            color: var(--accent-gold);
+            border-color: var(--accent-gold);
+        }
+
+        .star-btn:focus {
+            outline: 2px solid rgba(197, 160, 89, 0.35);
+            outline-offset: 2px;
+        }
+
+        .feedback-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #eadfce;
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+        }
+
+        .feedback-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .feedback-note {
+            font-size: 13px;
+            color: #6a5a50;
+        }
+
+        .product-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+            position: sticky;
+            bottom: 0;
+            background: #fff;
+            padding: 10px 0 6px;
+            border-top: 1px solid #f1e1c2;
+            z-index: 2;
+        }
+        .product-actions .cta-btn {
+            padding: 10px 12px;
+            font-size: 14px;
+            border-radius: 6px;
+            border: 1px solid var(--primary-maroon);
+            background: #fff;
+            color: var(--primary-maroon);
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.2s ease;
+            flex: 1 1 calc(50% - 10px);
+            min-height: 40px;
+        }
+        .product-actions .cta-btn.is-disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .product-actions .back-btn {
+            flex: 1 1 100%;
+        }
+        .product-actions .cta-btn:hover {
+            background: var(--primary-maroon);
+            color: #fff;
+        }
+        .product-actions .primary-buy-btn {
+            background: var(--primary-maroon);
+            color: #fff;
+        }
+        .product-actions .primary-buy-btn:hover {
+            background: var(--accent-gold);
+            color: var(--primary-maroon);
+        }
+        .product-actions .secondary-contact-btn {
+            background: #fff7ed;
+        }
+        .product-actions .secondary-contact-btn:hover {
+            background: var(--accent-gold);
+            color: #fff;
+        }
+        .action-help {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #5b4630;
+            background: #fffaf2;
+            border: 1px dashed var(--accent-gold);
+            padding: 10px 12px;
+            border-radius: 6px;
+        }
+
+        .add-to-bag-btn {
+            flex: 1;
+            padding: 10px 14px;
+            background: linear-gradient(to right, var(--primary-maroon), var(--header-top-bg));
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .add-to-bag-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(75, 22, 28, 0.3);
+        }
+
+        .back-btn {
+            padding: 10px 14px;
+            background: #ccc;
+            color: var(--text-dark);
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .back-btn:hover {
+            background: #999;
+        }
+
+        @media (max-width: 1024px) {
+            .product-details-container {
+                grid-template-columns: 1fr;
+                gap: 30px;
+                padding: 28px 5%;
+            }
+
+            #zoom-image {
+                height: 100%;
+            }
+
+            .product-image-section {
+                position: static;
+            }
+
+            .product-info-section {
+                max-height: none;
+                overflow: visible;
+            }
+
+            .product-info-section h1 {
+                font-size: 28px;
+            }
+
+            .product-price {
+                font-size: 24px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .product-details-container {
+                padding: 18px 3%;
+                gap: 20px;
+                min-height: auto;
+            }
+
+            #zoom-image {
+                height: auto;
+                max-height: 360px;
+            }
+
+            .zoom-container {
+                aspect-ratio: auto;
+            }
+
+            .product-info-section {
+                padding: 16px;
+            }
+
+            .product-info-section h1 {
+                font-size: 24px;
+            }
+
+            .product-price {
+                font-size: 22px;
+            }
+
+            .product-description {
+                font-size: 14px;
+            }
+
+            .product-actions {
+                flex-direction: column;
+                gap: 10px;
+                position: static;
+            }
+
+            .product-actions .cta-btn {
+                width: 100%;
+                padding: 10px 14px;
+                font-size: 14px;
+                flex: 1 1 100%;
+            }
+
+            .product-info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .related-products {
+                padding: 30px 5% 45px;
+            }
+
+            .related-card img {
+                height: 180px;
+            }
+        }
+
+        @media (max-width: 540px) {
+            .related-products {
+                padding: 22px 4% 32px;
+            }
+
+            .related-grid {
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                gap: 14px;
+            }
+
+            .related-card img {
+                height: 160px;
+            }
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-image-container {
+            position: relative;
+            max-width: 90vw;
+            max-height: 90vh;
+        }
+
+        .modal-image-container img {
+            width: 100%;
+            height: auto;
+            max-height: 85vh;
+            object-fit: contain;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: -30px;
+            right: 0;
+            font-size: 36px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .modal-close:hover {
+            color: var(--accent-gold);
+        }
+
+        .related-products {
+            padding: 40px 8% 60px;
+            background: linear-gradient(180deg, #fffaf2 0%, #ffffff 100%);
+        }
+
+        .related-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .related-header h3 {
+            margin: 0 0 6px;
+            font-family: var(--font-main);
+            color: var(--primary-maroon);
+            font-size: 28px;
+        }
+
+        .related-header p {
+            margin: 0;
+            color: #6b5b4b;
+            font-size: 14px;
+        }
+
+        .related-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 22px;
+        }
+
+        .related-card {
+            background: #fff;
+            border: 1px solid #f1e1c2;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .related-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        .related-card h4 {
+            margin: 6px 0 0;
+            color: var(--primary-maroon);
+            font-size: 16px;
+        }
+
+        .related-card .related-price {
+            color: var(--accent-gold);
+            font-weight: 700;
+            display: block;
+        }
+
+        .related-card .related-original {
+            font-size: 12px;
+            color: #9a7b4e;
+            text-decoration: line-through;
+            display: block;
+        }
+
+        .related-card .related-category {
+            font-size: 12px;
+            color: #6b5b4b;
+        }
+
+        .related-card .related-btn {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--primary-maroon);
+            background: #fff;
+            color: var(--primary-maroon);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .related-card .related-btn:hover {
+            background: var(--primary-maroon);
+            color: #fff;
+        }
+
+        html.desktop-scale .product-details-container {
+            min-height: auto;
+            padding-bottom: 24px;
+        }
+
+        html.desktop-scale .product-actions {
+            position: static;
+        }
+
+        html.desktop-scale .related-products {
+            padding-top: 26px;
+        }
+
+        body.product-details-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body.product-details-page::before {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 900px;
+            height: 900px;
+            background-image: url('images/logo.png');
+            background-size: 90%;
+            background-repeat: no-repeat;
+            background-position: center center;
+            opacity: 0.08;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        header,
+        .product-details-container,
+        .related-products,
+        footer {
+            position: relative;
+            z-index: 1;
+        }
+
+        body.product-details-page footer {
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body class="product-details-page">
+    <!-- Header -->
+    <header>
+        <div class="header-top">
+        </div>
+        <div class="header-main">
+            <div class="logo">
+                <img src="images/logo.png" alt="Rudra Paithani Yeola Logo">
+                <h1>Rudra Paithani Yeola</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="products.html">Products</a></li>
+                    <li><a href="about.html">About</a></li>
+                    <li><a href="login.html">Login</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                    <li><a href="admin-login.html">Admin</a></li>
+                </ul>
+            </nav>
+            <div class="header-cart">
+                <a href="profile.html" class="nav-profile-link" aria-label="User Profile">
+                    <span class="nav-profile-icon">&#128100;</span>
+                </a>
+                <a href="cart.html" class="nav-cart-link" aria-label="Cart">
+                    <span class="nav-cart-icon">&#128722;</span>
+                    <span class="nav-cart-badge" data-cart-count>0</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Product Details Container -->
+    <div class="product-details-container">
+        <!-- Image Section with Zoom -->
+        <div class="product-image-section">
+            <div class="zoom-container">
+                <img id="zoom-image" src="" alt="Product Image">
+            </div>
+            <div class="zoom-controls">
+                <button class="zoom-btn" id="zoom-in-btn">+ Zoom In</button>
+                <button class="zoom-btn" id="zoom-out-btn">- Zoom Out</button>
+                <button class="zoom-btn" id="fullscreen-btn">Fullscreen</button>
+            </div>
+        </div>
+
+        <!-- Product Information -->
+        <div class="product-info-section">
+            <h1 id="product-name">Loading...</h1>
+            <p class="product-category" id="product-category"></p>
+            <p class="stock-status" id="stock-status"></p>
+            <div class="product-price" id="product-price">? 0</div>
+            <div class="product-description" id="product-description">Loading product details...</div>
+            <div class="product-info-block">
+                <h3>Product Information</h3>
+                <div class="product-info-grid" id="product-info-grid"></div>
+            </div>
+            <div class="customization-section">
+                <h3>Customize Your Product</h3>
+                <div class="custom-options">
+                    <label><input type="checkbox" id="custom-fall-pico"> Fall & Pico (+?300)</label>
+                    <label><input type="checkbox" id="custom-tassels"> Tassels (+?250)</label>
+                    <label><input type="checkbox" id="custom-blouse"> Blouse Stitching (+?700)</label>
+                    <label><input type="checkbox" id="custom-gift-wrap"> Gift Wrap (+?150)</label>
+                    <label><input type="checkbox" id="custom-express"> Express Delivery (+?500)</label>
+                </div>
+                <div class="custom-field">
+                    <label for="custom-notes">Customization Notes</label>
+                    <textarea id="custom-notes" rows="3" placeholder="Share any special requests (colors, border, blouse size)."></textarea>
+                </div>
+                <div class="custom-summary">
+                    <div class="custom-summary-row">
+                        <span>Base Price</span>
+                        <strong id="custom-base-price">?0</strong>
+                    </div>
+                    <div class="custom-summary-row">
+                        <span>Custom Add-ons</span>
+                        <strong id="custom-addons">?0</strong>
+                    </div>
+                    <div class="custom-summary-row total">
+                        <span>Total</span>
+                        <strong id="custom-total">?0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feedback-section" id="feedback-section">
+                <h3>Star Feedback</h3>
+                <div class="feedback-row">
+                    <div class="star-rating" id="feedback-stars" role="radiogroup" aria-label="Rate this product">
+                        <button type="button" class="star-btn" data-rating="1" aria-label="1 star">&#9733;</button>
+                        <button type="button" class="star-btn" data-rating="2" aria-label="2 stars">&#9733;</button>
+                        <button type="button" class="star-btn" data-rating="3" aria-label="3 stars">&#9733;</button>
+                        <button type="button" class="star-btn" data-rating="4" aria-label="4 stars">&#9733;</button>
+                        <button type="button" class="star-btn" data-rating="5" aria-label="5 stars">&#9733;</button>
+                    </div>
+                    <span class="feedback-note" id="feedback-rating-label">Select a rating</span>
+                </div>
+                <textarea class="feedback-textarea" id="feedback-text" placeholder="Share your feedback about this saree."></textarea>
+                <div class="feedback-actions">
+                    <button class="cta-btn secondary-contact-btn" type="button" id="submit-feedback">Submit Feedback</button>
+                    <span class="feedback-note" id="feedback-note"></span>
+                </div>
+            </div>
+
+            <div class="product-actions">
+                <button class="cta-btn add-to-bag-btn" id="add-to-bag">Add to Cart</button>
+                <button class="cta-btn primary-buy-btn" id="buy-now">Order Now</button>
+                <button class="cta-btn primary-buy-btn preorder-btn" id="preorder-btn" style="display:none;">Preorder</button>
+                <a class="cta-btn secondary-contact-btn" id="contact-to-buy" href="contact.html">Contact to Buy</a>
+                <button class="cta-btn back-btn" id="back-btn">Back to Products</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Products -->
+    <section class="related-products">
+        <div class="related-header">
+            <h3>You May Also Like</h3>
+            <p>Curated styles similar to this piece.</p>
+        </div>
+        <div class="related-grid" id="related-product-grid"></div>
+    </section>
+      
+    <!-- Fullscreen Modal -->
+    <div class="modal-overlay" id="fullscreen-modal">
+        <div class="modal-image-container">
+            <span class="modal-close" id="modal-close">&times;</span>
+            <img id="fullscreen-image" src="" alt="Fullscreen Product Image">
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-info">
+                <p>Email: <a href="https://mail.google.com/mail/?view=cm&fs=1&to=paithanisareewebsite@gmail.com" target="_blank" rel="noopener noreferrer">paithanisareewebsite@gmail.com</a></p>
+                <p>Reach us: Yeola, Nashik, Maharashtra - 423401</p>
+                <p>Phone: +91 7888118137</p>
+                        </div>
+            <div class="footer-links">
+                <a href="terms.html">Terms of Service</a>
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="care-guide.html">Paithani Care Guide</a>
+                <a href="return-refund.html">Return & Refund</a>
+            </div>
+        </div>
+    </footer>
+
+    
+    <script src="js/script.js?v=20260327"></script>
+    <script src="js/back-button.js"></script>
+    <script src="js/whatsapp-chat.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

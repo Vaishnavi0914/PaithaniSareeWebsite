@@ -1,0 +1,15 @@
+﻿# Secrets
+.env
+.env.*
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
+.history/
+
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Editor
+.vscode/

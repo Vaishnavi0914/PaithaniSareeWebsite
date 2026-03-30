@@ -1,0 +1,442 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard | Rudra Paithani Yeola</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    body { position: relative; }
+    body::before {
+      content: '';
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 900px;
+      height: 900px;
+      background-image: url('images/logo.png');
+      background-size: 90%;
+      background-repeat: no-repeat;
+      background-position: center center;
+      opacity: 0.08;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .admin-shell, .admin-topbar, .admin-main { position: relative; z-index: 1; }
+  </style>
+</head>
+<body class="admin-body">
+  <div class="admin-shell">
+    <aside class="admin-sidebar">
+      <div class="admin-brand">
+        <img class="admin-brand-logo" src="images/logo.png" alt="Rudra Paithani Logo" />
+        <div class="admin-brand-title">Rudra Paithani</div>
+        <div class="admin-brand-sub">Admin Console</div>
+      </div>
+      <nav class="admin-side-nav">
+        <a href="index.html" class="admin-home-link">Home</a>
+        <a href="#overview" class="active">Overview</a>
+        <a href="#orders">Orders</a>
+        <a href="#products">Products</a>
+        <a href="#users">Users</a>
+        <a href="#messages">Messages</a>
+        <a href="#settings">Settings</a>
+        <a href="#security">Security</a>
+      </nav>
+      <div class="admin-side-actions">
+        <a class="admin-inline-btn secondary" href="index.html">View Store</a>
+        <a class="admin-inline-btn" href="orders.html">Orders Center</a>
+      </div>
+      <div class="admin-side-footer">
+        <span class="muted">Need help? Email support.</span>
+      </div>
+    </aside>
+
+    <div class="admin-content">
+      <header class="admin-topbar">
+        <div class="admin-topbar-title">
+          <h1>Admin Dashboard</h1>
+          <p>Overview of store performance and management tools.</p>
+        </div>
+        <div class="admin-topbar-meta">
+          <span class="admin-user-chip">Admin</span>
+          <span class="admin-date" id="admin-today"></span>
+        </div>
+      </header>
+
+      <main class="admin-main admin-main-dashboard">
+        <section class="admin-section" id="overview">
+          <div class="admin-section-header">
+            <h2>Overview and Analytics</h2>
+            <p>Track store performance, revenue, and key trends at a glance.</p>
+          </div>
+          <div class="admin-kpi-grid">
+            <div class="admin-kpi-card">
+              <div class="admin-kpi-label">Total Orders</div>
+              <div class="admin-kpi-value" id="kpi-orders">0</div>
+              <div class="admin-kpi-sub">Last 30 days: <span id="kpi-orders-30">0</span></div>
+            </div>
+            <div class="admin-kpi-card">
+              <div class="admin-kpi-label">Total Users</div>
+              <div class="admin-kpi-value" id="kpi-users">0</div>
+              <div class="admin-kpi-sub">New this month: <span id="kpi-users-30">0</span></div>
+            </div>
+            <div class="admin-kpi-card">
+              <div class="admin-kpi-label">Revenue</div>
+              <div class="admin-kpi-value" id="kpi-revenue">Rs 0</div>
+              <div class="admin-kpi-sub">Average order value: <span id="kpi-aov">Rs 0</span></div>
+            </div>
+            <div class="admin-kpi-card">
+              <div class="admin-kpi-label">Top Product</div>
+              <div class="admin-kpi-value" id="kpi-top-product">-</div>
+              <div class="admin-kpi-sub">By units sold</div>
+            </div>
+          </div>
+          <div class="admin-insights-grid">
+            <div class="admin-card">
+              <h4>Top Products</h4>
+              <ul class="admin-list" id="top-products-list">
+                <li><span>No data yet</span><span>-</span></li>
+              </ul>
+            </div>
+            <div class="admin-card">
+              <h4>Low Stock Alerts</h4>
+              <ul class="admin-list" id="low-stock-list">
+                <li><span>No low stock items</span><span>-</span></li>
+              </ul>
+            </div>
+            <div class="admin-card recent-orders-card">
+              <h4>Recent Orders</h4>
+              <div id="recent-orders-root">
+                <p class="muted">Loading recent orders...</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-section" id="orders">
+          <div class="admin-section-header">
+            <h2>Orders Management</h2>
+            <p>View, filter, and update order status from the orders center.</p>
+          </div>
+          <div class="admin-quick-actions">
+            <a class="admin-link-btn" href="orders.html">Open Orders Center</a>
+            <span class="muted" id="orders-summary">Latest status updates appear here.</span>
+          </div>
+          <div class="admin-card" id="orders-preview">
+            <div class="muted">Use the orders page to filter and update delivery status.</div>
+          </div>
+        </section>
+
+        <section class="admin-section" id="products">
+          <div class="admin-section-header">
+            <h2>Products Management</h2>
+            <p>Add, edit, delete, and track inventory for your Paithani collection.</p>
+          </div>
+          <section id="admin-data-root"></section>
+          <section class="product-actions">
+            <h3>Product Actions</h3>
+            <div class="product-buttons-container">
+              <button id="addProductBtn" class="btn-action btn-add">
+                <span class="btn-icon">+</span>
+                <span>Add Product</span>
+              </button>
+              <button id="editProductBtn" class="btn-action btn-edit">
+                <span class="btn-icon">E</span>
+                <span>Edit Product</span>
+              </button>
+              <button id="deleteProductBtn" class="btn-action btn-delete">
+                <span class="btn-icon">X</span>
+                <span>Delete Product</span>
+              </button>
+            </div>
+          </section>
+        </section>
+
+        <section class="admin-section" id="users">
+          <div class="admin-section-header">
+            <h2>Users Management</h2>
+            <p>Review customer accounts, view details, and block or unblock users.</p>
+          </div>
+          <div class="admin-quick-actions">
+            <a class="admin-link-btn" href="users.html">Open Users Center</a>
+            <span class="muted" id="users-summary">Track new signups and account status.</span>
+          </div>
+          <div class="admin-card" id="users-preview">
+            <div class="muted">Manage user access and review profiles in the users page.</div>
+          </div>
+        </section>
+
+        <section class="admin-section" id="messages">
+          <div class="admin-section-header">
+            <h2>Messages and Contact</h2>
+            <p>Review customer questions, preorder requests, and send replies.</p>
+          </div>
+          <div class="admin-quick-actions">
+            <a class="admin-link-btn" href="messages.html">Open Messages Center</a>
+            <span class="muted" id="messages-summary">Reply to customers directly from the messages page.</span>
+          </div>
+          <div class="admin-card" id="messages-preview">
+            <div class="muted">All incoming messages appear in the messages page.</div>
+          </div>
+        </section>
+
+        <section class="admin-section" id="settings">
+          <div class="admin-section-header">
+            <h2>Settings</h2>
+            <p>Update admin profile details and key website preferences.</p>
+          </div>
+          <form id="admin-settings-form" class="admin-settings">
+            <div class="admin-settings-grid">
+              <div>
+                <label for="setting-admin-name">Admin Name</label>
+                <input id="setting-admin-name" type="text" placeholder="Admin Name" />
+              </div>
+              <div>
+                <label for="setting-admin-email">Admin Email</label>
+                <input id="setting-admin-email" type="email" placeholder="paithanisareewebsite@gmail.com" />
+              </div>
+              <div>
+                <label for="setting-store-email">Store Contact Email</label>
+                <input id="setting-store-email" type="email" placeholder="paithanisareewebsite@gmail.com" />
+              </div>
+              <div>
+                <label for="setting-store-phone">Store Phone</label>
+                <input id="setting-store-phone" type="text" placeholder="+91 7888118137" />
+              </div>
+              <div>
+                <label for="setting-low-stock">Default Low Stock Threshold</label>
+                <input id="setting-low-stock" type="number" min="0" value="2" />
+              </div>
+              <div>
+                <label for="setting-home-banner">Homepage Banner Text</label>
+                <input id="setting-home-banner" type="text" placeholder="Authentic Paithani elegance" />
+              </div>
+              <div>
+                <label for="setting-sale-active">Festival / Sale Active</label>
+                <input id="setting-sale-active" type="checkbox" />
+              </div>
+              <div>
+                <label for="setting-sale-label">Sale Banner Text</label>
+                <input id="setting-sale-label" type="text" placeholder="Festive Sale â€¢ Limited Time" />
+              </div>
+              <div>
+                <label for="setting-sale-type">Sale Discount Type</label>
+                <select id="setting-sale-type">
+                  <option value="none">No Discount</option>
+                  <option value="percent">Percentage (%)</option>
+                  <option value="flat">Flat (Rs)</option>
+                </select>
+              </div>
+              <div>
+                <label for="setting-sale-value">Sale Discount Value</label>
+                <input id="setting-sale-value" type="number" min="0" value="0" />
+              </div>
+            </div>
+            <div class="admin-settings-actions">
+              <button type="submit" class="admin-inline-btn">Save Settings</button>
+              <span class="muted" id="settings-status"></span>
+            </div>
+          </form>
+        </section>
+
+        <section class="admin-section" id="security">
+          <div class="admin-section-header">
+            <h2>Security and Logout</h2>
+            <p>Review recent admin activity and sign out securely.</p>
+          </div>
+          <div class="admin-insights-grid">
+            <div class="admin-card">
+              <h4>Activity Log</h4>
+              <ul class="admin-activity-log" id="admin-activity-log">
+                <li><span>No activity yet</span><span>-</span></li>
+              </ul>
+            </div>
+            <div class="admin-card">
+              <h4>Change Password</h4>
+              <form id="admin-password-form" class="admin-password-form">
+                <div class="admin-settings-grid">
+                  <div>
+                    <label for="admin-current-password">Current Password</label>
+                    <input id="admin-current-password" type="password" autocomplete="current-password" />
+                  </div>
+                  <div>
+                    <label for="admin-new-password">New Password</label>
+                    <input id="admin-new-password" type="password" autocomplete="new-password" />
+                  </div>
+                  <div>
+                    <label for="admin-confirm-password">Confirm Password</label>
+                    <input id="admin-confirm-password" type="password" autocomplete="new-password" />
+                  </div>
+                </div>
+                <p class="admin-password-hint">Password must be at least 8 characters and include a letter, a number, and a special character.</p>
+                <div class="admin-settings-actions">
+                  <button type="submit" class="admin-inline-btn">Update Password</button>
+                  <span class="muted" id="admin-password-status"></span>
+                </div>
+              </form>
+            </div>
+            <div class="admin-card">
+              <h4>Quick Actions</h4>
+              <p class="muted">Use this button to log out of the admin panel.</p>
+              <button type="button" id="admin-logout-btn" class="admin-inline-btn danger">Logout</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Add Product Modal -->
+        <div id="addProductModal" class="modal" style="display: none;">
+          <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Add New Product</h2>
+            <form id="addProductForm">
+              <label>Product Name:</label>
+              <input type="text" id="productName" required />
+              <label>Product Price:</label>
+              <input type="number" id="productPrice" required />
+              <label>Discount Type:</label>
+              <select id="productDiscountType">
+                <option value="none">No Discount</option>
+                <option value="percent">Percentage (%)</option>
+                <option value="flat">Flat (Rs)</option>
+              </select>
+              <label>Discount Value:</label>
+              <input type="number" id="productDiscountValue" min="0" value="0" />
+              <label>Category:</label>
+              <select id="productCategory">
+                <option value="Pure Silk Paithani">Pure Silk Paithani</option>
+                <option value="Semi Silk Paithani">Semi Silk Paithani</option>
+                <option value="Paithani Accessories">Accessories</option>
+                <option value="Festival Specials">Festival Specials</option>
+                <option value="Family">Family</option>
+              </select>
+              <label>Family Group:</label>
+              <select id="productFamilyGroup" disabled>
+                <option value="">Select family group</option>
+                <option value="Children">Children</option>
+                <option value="Parents">Parents</option>
+                <option value="Grandparents">Grandparents</option>
+              </select>
+              <label>Status:</label>
+                <select id="productStatus">
+                  <option value="available">Available</option>
+                  <option value="preorder">Preorder</option>
+                  <option value="new" selected>New Arrival</option>
+                  <option value="soldout">Sold Out</option>
+                </select>
+              <label>SKU:</label>
+              <input type="text" id="productSku" placeholder="PAI-001" />
+              <label>Stock Quantity:</label>
+              <input type="number" id="productStock" min="0" value="0" />
+                <label>Low Stock Threshold:</label>
+                <input type="number" id="productLowStock" min="0" value="2" />
+                <label class="inline-check">
+                  <input type="checkbox" id="productFeatured" />
+                  Mark as Featured
+                </label>
+                <label>Product Description:</label>
+                <textarea id="productDescription" required></textarea>
+                <label>Product Image:</label>
+                <input type="file" id="productImage" accept="image/*" required />
+              <button type="submit">Add Product</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Edit Product Modal -->
+        <div id="editProductModal" class="modal" style="display: none;">
+          <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Edit Product</h2>
+            <form id="editProductForm">
+              <label>Select Product:</label>
+              <select id="productSelect" required>
+                <option value="">Choose a product...</option>
+              </select>
+              <label>Product Name:</label>
+              <input type="text" id="editProductName" required />
+              <label>Product Price:</label>
+              <input type="number" id="editProductPrice" required />
+              <label>Discount Type:</label>
+              <select id="editProductDiscountType">
+                <option value="none">No Discount</option>
+                <option value="percent">Percentage (%)</option>
+                <option value="flat">Flat (Rs)</option>
+              </select>
+              <label>Discount Value:</label>
+              <input type="number" id="editProductDiscountValue" min="0" value="0" />
+              <label>Category:</label>
+              <select id="editProductCategory">
+                <option value="Pure Silk Paithani">Pure Silk Paithani</option>
+                <option value="Semi Silk Paithani">Semi Silk Paithani</option>
+                <option value="Paithani Accessories">Accessories</option>
+                <option value="Festival Specials">Festival Specials</option>
+                <option value="Family">Family</option>
+              </select>
+              <label>Family Group:</label>
+              <select id="editProductFamilyGroup" disabled>
+                <option value="">Select family group</option>
+                <option value="Children">Children</option>
+                <option value="Parents">Parents</option>
+                <option value="Grandparents">Grandparents</option>
+              </select>
+              <label>Status:</label>
+              <select id="editProductStatus">
+                <option value="available">Available</option>
+                <option value="preorder">Preorder</option>
+                <option value="new">New Arrival</option>
+                <option value="soldout">Sold Out</option>
+              </select>
+              <p class="muted" style="margin-top:-6px;">If a product is not available, set status to Sold Out. Use New Arrival for fresh drops.</p>
+                <label>SKU:</label>
+                <input type="text" id="editProductSku" placeholder="PAI-001" />
+                <label>Stock Quantity:</label>
+                <input type="number" id="editProductStock" min="0" value="0" />
+                <label>Low Stock Threshold:</label>
+                <input type="number" id="editProductLowStock" min="0" value="2" />
+                <label class="inline-check">
+                  <input type="checkbox" id="editProductFeatured" />
+                  Mark as Featured
+                </label>
+                <label>Product Description:</label>
+                <textarea id="editProductDescription" required></textarea>
+              <label>Product Image:</label>
+              <input type="file" id="editProductImage" accept="image/*" />
+              <button type="submit">Update Product</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Delete Product Modal -->
+        <div id="deleteProductModal" class="modal" style="display: none;">
+          <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Delete Product</h2>
+            <form id="deleteProductForm">
+              <label>Select Product to Delete:</label>
+              <select id="deleteProductSelect" required>
+                <option value="">Choose a product...</option>
+              </select>
+              <p style="color: red; font-weight: bold;">Warning: This action cannot be undone!</p>
+              <button type="submit" style="background-color: red;">Delete Product</button>
+              <button type="button" id="cancelDelete">Cancel</button>
+            </form>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="js/admin-auth.js"></script>
+  <script src="js/admin-dashboard.js"></script>
+    <script src="js/back-button.js"></script>
+    <script src="js/whatsapp-chat.js"></script>
+</body>
+</html>
+
+
+
+
+
+

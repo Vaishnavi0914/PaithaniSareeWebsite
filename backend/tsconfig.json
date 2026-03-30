@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "noEmit": true
+  },
+  "include": [
+    "**/*.js",
+    "**/*.ts"
+  ],
+  "files": [
+    "server.js",
+    "models/Product.js",
+    "models/User.js"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

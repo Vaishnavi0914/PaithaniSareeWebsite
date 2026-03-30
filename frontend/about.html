@@ -1,0 +1,848 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us | Rudra Paithani Yeola</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        .about-container {
+            background-color: var(--secondary-cream);
+            padding: 40px 8%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .about-container::before {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 900px;
+            height: 900px;
+            background-image: url('images/logo.png');
+            background-size: 90%;
+            background-repeat: no-repeat;
+            background-position: center center;
+            opacity: 0.08;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .about-section, .about-header {
+            position: relative;
+            z-index: 1;
+        }
+
+        .about-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .about-header h1 {
+            font-family: var(--font-main);
+            font-size: 48px;
+            color: var(--primary-maroon);
+            margin-bottom: 15px;
+        }
+
+        .about-header p {
+            font-size: 18px;
+            color: var(--text-dark);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .about-section {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 40px;
+            border-left: 5px solid var(--accent-gold);
+        }
+
+        .about-section h2 {
+            font-family: var(--font-main);
+            font-size: 32px;
+            color: var(--primary-maroon);
+            margin-bottom: 20px;
+            margin-top: 0;
+        }
+
+        .about-section p {
+            font-size: 16px;
+            color: var(--text-dark);
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .about-section ul {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+
+        .about-section ul li {
+            font-size: 16px;
+            color: var(--text-dark);
+            line-height: 1.8;
+            margin-bottom: 12px;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .about-section ul li:before {
+            content: "?";
+            position: absolute;
+            left: 0;
+            color: var(--accent-gold);
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .mission-vision {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .mission-card, .vision-card {
+            background: linear-gradient(135deg, var(--white), rgba(197, 160, 89, 0.05));
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid var(--accent-gold);
+        }
+
+        .mission-card h3, .vision-card h3 {
+            font-family: var(--font-main);
+            font-size: 28px;
+            color: var(--primary-maroon);
+            margin-bottom: 15px;
+        }
+
+        .mission-card p, .vision-card p {
+            font-size: 16px;
+            color: var(--text-dark);
+            line-height: 1.8;
+        }
+
+        .values-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .value-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+        }
+
+        .value-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .value-icon {
+            font-size: 40px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .value-card h3 {
+            font-family: var(--font-main);
+            font-size: 22px;
+            color: var(--primary-maroon);
+            margin-bottom: 10px;
+        }
+
+        .value-card p {
+            font-size: 14px;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        .why-choose-us {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .benefit-box {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 4px solid var(--primary-maroon);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+
+        .benefit-box h3 {
+            color: var(--primary-maroon);
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .benefit-box p {
+            font-size: 15px;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        .contact-section {
+            background: linear-gradient(135deg, var(--primary-maroon), var(--header-top-bg));
+            color: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .contact-section h2 {
+            font-family: var(--font-main);
+            font-size: 32px;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .contact-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .contact-item {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .contact-item h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .contact-item p {
+            font-size: 15px;
+            margin: 0;
+        }
+
+        /* Artisan Stats */
+        .artisan-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, var(--primary-maroon), var(--header-top-bg));
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(75, 22, 28, 0.3);
+        }
+
+        .stat-box h3 {
+            font-size: 32px;
+            margin: 0 0 10px 0;
+            font-weight: 700;
+        }
+
+        .stat-box p {
+            font-size: 14px;
+            margin: 0;
+        }
+
+        /* Collections Highlight */
+        .collections-highlight {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .collection-item {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            border: 2px solid var(--accent-gold);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+
+        .collection-item h3 {
+            color: var(--primary-maroon);
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .collection-item p {
+            font-size: 14px;
+            color: var(--text-dark);
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        /* Recognition Items */
+        .recognition-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .recognition-box {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            border-left: 5px solid var(--accent-gold);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+        }
+
+        .recognition-box:hover {
+            transform: translateY(-5px);
+        }
+
+        .recognition-icon {
+            font-size: 40px;
+            display: block;
+            margin-bottom: 15px;
+        }
+
+        .recognition-box h3 {
+            color: var(--primary-maroon);
+            font-size: 17px;
+            margin-bottom: 8px;
+        }
+
+        .recognition-box p {
+            font-size: 13px;
+            color: var(--text-dark);
+            margin: 0;
+        }
+
+        /* Experience Grid */
+        .experience-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .experience-item {
+            background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(197, 160, 89, 0.05));
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid var(--accent-gold);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+
+        .experience-item h3 {
+            color: var(--primary-maroon);
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .experience-item p {
+            font-size: 14px;
+            color: var(--text-dark);
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        @media (max-width: 1024px) {
+            .artisan-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .collections-highlight {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .recognition-items {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .experience-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .about-container {
+                padding: 30px 5%;
+            }
+
+            .about-header h1 {
+                font-size: 40px;
+            }
+
+            .about-section {
+                padding: 30px;
+            }
+
+            .mission-vision {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .about-container {
+                padding: 20px 3%;
+            }
+
+            .about-header h1 {
+                font-size: 32px;
+            }
+
+            .about-header p {
+                font-size: 16px;
+            }
+
+            .about-section {
+                padding: 20px;
+                margin-bottom: 25px;
+            }
+
+            .about-section h2 {
+                font-size: 26px;
+            }
+
+            .about-section p {
+                font-size: 14px;
+            }
+
+            .mission-card h3, .vision-card h3 {
+                font-size: 24px;
+            }
+
+            .value-card h3 {
+                font-size: 20px;
+            }
+
+            .benefit-box {
+                padding: 20px;
+            }
+
+            .stat-box {
+                padding: 20px;
+            }
+
+            .stat-box h3 {
+                font-size: 24px;
+            }
+
+            .artisan-stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+
+            .collections-highlight {
+                grid-template-columns: 1fr;
+            }
+
+            .collection-item {
+                padding: 20px;
+            }
+
+            .recognition-items {
+                grid-template-columns: 1fr;
+            }
+
+            .recognition-box {
+                padding: 20px;
+            }
+
+            .experience-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .experience-item {
+                padding: 20px;
+            }
+
+            .contact-section {
+                padding: 25px;
+            }
+
+            .contact-section h2 {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-top">
+        </div>
+        <div class="header-main">
+            <div class="logo">
+                <img src="images/logo.png" alt="Rudra Paithani Yeola Logo">
+                <h1>Rudra Paithani Yeola</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="products.html">Products</a></li>
+                    <li><a href="about.html" class="active">About</a></li>
+                    <li><a href="login.html">Login</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+<li><a href="admin-login.html">Admin</a></li>
+                </ul>
+            </nav>
+            <div class="header-cart">
+                <a href="profile.html" class="nav-profile-link" aria-label="User Profile">
+                    <span class="nav-profile-icon">&#128100;</span>
+                </a>
+                <a href="cart.html" class="nav-cart-link" aria-label="Cart">
+                    <span class="nav-cart-icon">&#128722;</span>
+                    <span class="nav-cart-badge" data-cart-count>0</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- About Container -->
+    <div class="about-container">
+        <!-- Header Section -->
+        <div class="about-header">
+            <h1>About Rudra Paithani Yeola</h1>
+            <p>Preserving the heritage and elegance of authentic Paithani sarees for over two decades</p>
+        </div>
+
+        <!-- Our Story Section -->
+        <section class="about-section">
+            <h2>Our Story</h2>
+            <p>
+                Rudra Paithani Yeola is a proud custodian of the rich Paithani weaving tradition that originates from the historic town of Yeola in Maharashtra. Founded with a passion for preserving authentic craftsmanship, we have been dedicated to bringing the finest Paithani sarees to discerning customers worldwide.
+            </p>
+            <p>
+                Each saree in our collection is a masterpiece, handcrafted by skilled artisans using traditional methods passed down through generations. We believe in maintaining the authenticity and quality that defines true Paithani weaving, while making these treasures accessible to contemporary women.
+            </p>
+            <p>
+                Our journey has been one of passion, dedication, and commitment to excellence. We work directly with master weavers in Yeola to ensure that every piece reflects the true spirit of this magnificent art form.
+            </p>
+        </section>
+
+        <!-- Mission & Vision -->
+        <section class="about-section">
+            <h2>Our Mission & Vision</h2>
+            <div class="mission-vision">
+                <div class="mission-card">
+                    <h3>Our Mission</h3>
+                    <p>
+                        To preserve and promote the authentic Paithani weaving heritage by creating exceptional sarees that combine traditional craftsmanship with contemporary style, ensuring fair compensation for artisans and bringing the elegance of Paithani to every corner of the world.
+                    </p>
+                </div>
+                <div class="vision-card">
+                    <h3>Our Vision</h3>
+                    <p>
+                        To be the most trusted source for authentic, high-quality Paithani sarees, recognized globally for our commitment to preserving traditional weaving techniques and supporting artisan communities.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Core Values -->
+        <section class="about-section">
+            <h2>Our Core Values</h2>
+            <div class="values-grid">
+                <div class="value-card">
+                    <span class="value-icon">&#129525;</span>
+                    <h3>Authenticity</h3>
+                    <p>We preserve and celebrate the authentic Paithani weaving tradition without compromise.</p>
+                </div>
+                <div class="value-card">
+                    <span class="value-icon">&#128736;</span>
+                    <h3>Craftsmanship</h3>
+                    <p>Every saree is handcrafted with meticulous attention to detail by skilled artisans.</p>
+                </div>
+                <div class="value-card">
+                    <span class="value-icon">&#10024;</span>
+                    <h3>Quality</h3>
+                    <p>We are committed to providing only the finest quality Paithani sarees to our customers.</p>
+                </div>
+                <div class="value-card">
+                    <span class="value-icon">&#129309;</span>
+                    <h3>Fair Trade</h3>
+                    <p>We ensure fair compensation and ethical practices for all artisans in our supply chain.</p>
+                </div>
+                <div class="value-card">
+                    <span class="value-icon">&#127757;</span>
+                    <h3>Global Reach</h3>
+                    <p>We make authentic Paithani sarees accessible to customers across the world.</p>
+                </div>
+                <div class="value-card">
+                    <span class="value-icon">&#127942;</span>
+                    <h3>Excellence</h3>
+                    <p>Excellence in every aspect - from weaving to customer service and delivery.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- WHY CHOOSE US -->
+        <section class="about-section">
+            <h2>Why Choose Us?</h2>
+            <div class="why-choose-us">
+                <div class="benefit-box">
+                    <h3>&#129525; Authentic Weaving</h3>
+                    <p>Every saree is handcrafted using traditional Paithani weaving techniques passed down through generations.</p>
+                </div>
+                <div class="benefit-box">
+                    <h3>&#10024; Premium Quality</h3>
+                    <p>We source only the finest silk and materials to ensure premium quality that lasts a lifetime.</p>
+                </div>
+                <div class="benefit-box">
+                    <h3>&#129489;&#8205;&#127912; Direct from Artisans</h3>
+                    <p>We work directly with master weavers from Yeola, ensuring fair prices and ethical practices.</p>
+                </div>
+                <div class="benefit-box">
+                    <h3>&#128142; Unique Collections</h3>
+                    <p>Each collection is limited edition, featuring exclusive designs and color combinations.</p>
+                </div>
+                <div class="benefit-box">
+                    <h3>&#128522; Customer Satisfaction</h3>
+                    <p>We stand behind every product with excellent customer service and support.</p>
+                </div>
+                <div class="benefit-box">
+                    <h3>&#128230; Secure Delivery</h3>
+                    <p>Safe and secure packaging with tracking to ensure your saree reaches you in perfect condition.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Our Process -->
+        <section class="about-section">
+            <h2>Our Weaving Process</h2>
+            <ul>
+                <li><strong>Design:</strong> Our master weavers conceptualize traditional and contemporary designs with intricate patterns.</li>
+                <li><strong>Material Selection:</strong> We carefully select premium silk and threads that meet our strict quality standards.</li>
+                <li><strong>Hand Weaving:</strong> Each saree is meticulously hand-woven on traditional looms, taking weeks to complete.</li>
+                <li><strong>Quality Check:</strong> Every finished saree undergoes rigorous quality inspection to ensure perfection.</li>
+                <li><strong>Finishing:</strong> Expert finishing touches including hemming and edge work are completed with precision.</li>
+                <li><strong>Packaging:</strong> Sarees are carefully packaged in premium materials to preserve their beauty during transit.</li>
+            </ul>
+        </section>
+
+        <!-- Royal Heritage Section -->
+        <section class="about-section">
+            <h2>Royal Heritage & Tradition</h2>
+            <p>
+                Paithani sarees are not just garments ? they are symbols of royal elegance and supreme craftsmanship. Historically adorned by queens and nobility, these sarees represent the pinnacle of Indian textile art. The intricate gold and silver zari work combined with silk creates a timeless allure that has captivated generations.
+            </p>
+            <p>
+                At Rudra Paithani Yeola, we honor this royal legacy by maintaining the highest standards of traditional weaving. Each saree carries within it centuries of refined taste and artistic mastery. Whether you choose a classic design or a contemporary interpretation, you are wearing a piece of royal Indian heritage.
+            </p>
+            <ul>
+                <li><strong>Royal Zari Work:</strong> Hand-applied gold and silver zari creates intricate patterns that catch light beautifully.</li>
+                <li><strong>Premium Silk:</strong> Only the finest mulberry silk is used to ensure comfort and durability.</li>
+                <li><strong>Peacock Motifs:</strong> Traditional peacock designs symbolize grace, beauty, and mystique.</li>
+                <li><strong>Timeless Appeal:</strong> These sarees transcend fashion trends and remain eternally elegant.</li>
+            </ul>
+        </section>
+
+        <!-- Artisan Excellence Section -->
+        <section class="about-section">
+            <h2>Meet Our Master Weavers</h2>
+            <p>
+                The heart of Rudra Paithani Yeola lies with our extraordinary team of master weavers from Yeola. These artisans are custodians of a craft that has been perfected over generations. Each weaver brings decades of experience, technical expertise, and artistic vision to every loom.
+            </p>
+            <p>
+                Our weavers work on traditional pit looms, using techniques that have remained virtually unchanged for centuries. This dedication to authenticity ensures that every saree produced is a genuine Paithani, not a mere imitation. We take pride in providing fair wages, safe working conditions, and consistent employment to ensure their livelihood and artistry thrive.
+            </p>
+            <div class="artisan-stats">
+                <div class="stat-box">
+                    <h3>20+ Years</h3>
+                    <p>Average Expertise</p>
+                </div>
+                <div class="stat-box">
+                    <h3>50+ Weavers</h3>
+                    <p>Master Craftspeople</p>
+                </div>
+                <div class="stat-box">
+                    <h3>1000+ Sarees</h3>
+                    <p>Annually Created</p>
+                </div>
+                <div class="stat-box">
+                    <h3>100% Authentic</h3>
+                    <p>Traditional Methods</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Collections Highlight -->
+        <section class="about-section">
+            <h2>Our Signature Collections</h2>
+            <p>
+                Each collection at Rudra Paithani Yeola tells a story of tradition, innovation, and royal elegance. We curate limited-edition collections that blend classic designs with contemporary aesthetics.
+            </p>
+            <div class="collections-highlight">
+                <div class="collection-item">
+                    <h3>&#128081; Royal Maharani Collection</h3>
+                    <p>Inspired by the grandeur of Indian queens, featuring elaborate zari work and peacock motifs in rich colors.</p>
+                </div>
+                <div class="collection-item">
+                    <h3>&#129525; Yeola Classic Collection</h3>
+                    <p>Traditional designs that honor the authentic Paithani weaving techniques with timeless appeal.</p>
+                </div>
+                <div class="collection-item">
+                    <h3>&#10024; Contemporary Elegance</h3>
+                    <p>Modern interpretations of classic patterns, perfect for today's sophisticated woman.</p>
+                </div>
+                <div class="collection-item">
+                    <h3>&#127942; Prestige Collection</h3>
+                    <p>Ultra-premium sarees with exceptional zari work and rare color combinations for the discerning collector.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Awards & Recognition -->
+        <section class="about-section">
+            <h2>Awards & Recognition</h2>
+            <p>
+                Our commitment to excellence and authenticity has earned us recognition from prestigious organizations and satisfied customers worldwide.
+            </p>
+            <div class="recognition-items">
+                <div class="recognition-box">
+                    <span class="recognition-icon">&#127942;</span>
+                    <h3>Best Authentic Paithani Producer</h3>
+                    <p>Recognized for traditional craftsmanship and quality</p>
+                </div>
+                <div class="recognition-box">
+                    <span class="recognition-icon">&#129489;&#8205;&#127912;</span>
+                    <h3>Artisan Champion Award</h3>
+                    <p>For fair trade practices and artisan welfare</p>
+                </div>
+                <div class="recognition-box">
+                    <span class="recognition-icon">&#9989;</span>
+                    <h3>Premium Quality Certification</h3>
+                    <p>Certified for superior silk and zari standards</p>
+                </div>
+                <div class="recognition-box">
+                    <span class="recognition-icon">&#11088;</span>
+                    <h3>Customer Excellence</h3>
+                    <p>5-star rated for service and product quality</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Premium Experience Section -->
+        <section class="about-section">
+            <h2>The Rudra Paithani Experience</h2>
+            <p>
+                Owning a Rudra Paithani Yeola saree is more than a purchase ? it is an investment in legacy, beauty, and artistry. We ensure a premium experience at every touchpoint:
+            </p>
+            <div class="experience-grid">
+                <div class="experience-item">
+                    <h3>&#127873; Luxury Packaging</h3>
+                    <p>Each saree is presented in premium packaging befitting a royal treasure.</p>
+                </div>
+                <div class="experience-item">
+                    <h3>&#128220; Certificate of Authenticity</h3>
+                    <p>Every saree comes with a certificate verifying its authenticity and origin.</p>
+                </div>
+                <div class="experience-item">
+                    <h3>&#128172; Personal Consultation</h3>
+                    <p>Our experts guide you in selecting the perfect saree for your occasion.</p>
+                </div>
+                <div class="experience-item">
+                    <h3>&#128737; Lifetime Care</h3>
+                    <p>We provide expert care and maintenance advice to preserve your saree's beauty.</p>
+                </div>
+                <div class="experience-item">
+                    <h3>&#127757; Global Delivery</h3>
+                    <p>Premium shipping with tracking to ensure safe delivery worldwide.</p>
+                </div>
+                <div class="experience-item">
+                    <h3>&#128222; Lifetime Support</h3>
+                    <p>Our team is always available to support you with any queries or concerns.</p>
+                </div>
+            </div>
+        </section>
+
+        </section>
+        <section class="contact-section">
+            <h2>Get in Touch with Us</h2>
+            <p>We'd love to hear from you! Whether you have questions about our products or want to learn more about Paithani weaving, feel free to reach out.</p>
+            <div class="contact-info">
+                <div class="contact-item">
+                    <h3>&#9993; Email</h3>
+                    <p><a href="https://mail.google.com/mail/?view=cm&fs=1&to=paithanisareewebsite@gmail.com" target="_blank" rel="noopener noreferrer">paithanisareewebsite@gmail.com</a></p>
+                </div>
+                <div class="contact-item">
+                    <h3>&#128222; Phone</h3>
+                    <p>+91 7888118137</p>
+                </div>
+                <div class="contact-item">
+                    <h3>&#128205; Location</h3>
+                    <p>Yeola, Maharashtra, India</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-info">
+                <p>Email: <a href="https://mail.google.com/mail/?view=cm&fs=1&to=paithanisareewebsite@gmail.com" target="_blank" rel="noopener noreferrer">paithanisareewebsite@gmail.com</a></p>
+                <p>Reach us: Yeola, Nashik, Maharashtra - 423401</p>
+                <p>Phone: +91 9860655387</p>
+                        </div>
+            <div class="footer-links">
+                <a href="terms.html">Terms of Service</a>
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="care-guide.html">Paithani Care Guide</a>
+                <a href="return-refund.html">Return & Refund</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/script.js?v=20260327"></script>
+    <script src="js/back-button.js"></script>
+    <script src="js/whatsapp-chat.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

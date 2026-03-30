@@ -1,0 +1,108 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Rudra Paithani Yeola</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { position: relative; }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 900px;
+            height: 900px;
+            background-image: url('images/logo.png');
+            background-size: 90%;
+            background-repeat: no-repeat;
+            background-position: center center;
+            opacity: 0.08;
+            z-index: 0;
+            pointer-events: none;
+        }
+        header, .form-container, footer { position: relative; z-index: 1; }
+    </style>
+</head>
+<body class="page-footer-stick auth-page">
+    <header>
+        <div class="header-top">
+        </div>
+        <div class="header-main">
+            <div class="logo">
+                <img src="images/logo.png" alt="Rudra Paithani Yeola Logo">
+                <h1>Rudra Paithani Yeola</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="products.html">Products</a></li>
+                    <li><a href="about.html">About</a></li>
+                    <li><a href="login.html" class="active">Login</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                    <li><a href="admin-login.html">Admin</a></li>
+                </ul>
+            </nav>
+            <div class="header-cart">
+                <a href="profile.html" class="nav-profile-link" aria-label="User Profile">
+                    <span class="nav-profile-icon">&#128100;</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="form-container">
+        <h2 class="page-title" style="margin-top:0;">Login</h2>
+        <p class="form-message" id="login-message"></p>
+        <form id="login-form">
+            <input type="email" id="login-email" placeholder="Email Address" required>
+            <input type="password" id="login-password" placeholder="Password" required>
+            <button type="submit" class="btn-primary" style="width:100%;">Login</button>
+        </form>
+        <div class="form-row"><a class="form-link" href="forgot-password.html">Forgot password?</a></div>
+        <p class="form-meta">Don't have an account? <a href="signup.html">Sign Up</a></p>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-info">
+                <p>Email: <a href="https://mail.google.com/mail/?view=cm&fs=1&to=paithanisareewebsite@gmail.com" target="_blank" rel="noopener noreferrer">paithanisareewebsite@gmail.com</a></p>
+                <p>Reach us: Yeola, Nashik, Maharashtra - 423401</p>
+                <p>Phone: +91 7888118137</p>
+                        </div>
+            <div class="footer-links">
+                <a href="terms.html">Terms of Service</a>
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="care-guide.html">Paithani Care Guide</a>
+                <a href="return-refund.html">Return & Refund</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/script.js?v=20260327"></script>
+    <script src="js/back-button.js"></script>
+    <script src="js/whatsapp-chat.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

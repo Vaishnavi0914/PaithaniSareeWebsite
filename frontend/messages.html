@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact Messages | Rudra Paithani Yeola</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="header-top">
+    <p>Welcome to Admin Panel</p>
+  </div>
+
+  <header class="header-main" style="border-bottom: 3px solid var(--primary-maroon);">
+    <div class="logo">
+      <h1>Admin Dashboard</h1>
+    </div>
+    <nav>
+      <ul>
+        <li><a href="admin-dashboard.html">Overview</a></li>
+        <li><a href="orders.html">Orders</a></li>
+        <li><a href="admin-dashboard.html#products">Products</a></li>
+        <li><a href="users.html">Users</a></li>
+        <li><a href="messages.html" class="active">Messages</a></li>
+        <li><a href="index.html">Home</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="admin-main">
+    <section class="admin-section">
+      <div class="admin-section-header">
+        <h2>Messages and Contact</h2>
+        <p>View customer enquiries and send replies.</p>
+      </div>
+      <div class="admin-filters">
+        <input id="message-search" class="admin-input" type="text" placeholder="Search by name, email, or message" />
+        <select id="message-status-filter" class="admin-select">
+          <option value="">All messages</option>
+          <option value="open">Open</option>
+          <option value="replied">Replied</option>
+        </select>
+        <button id="message-refresh" class="admin-inline-btn secondary" type="button">Refresh</button>
+      </div>
+      <div id="messages-root" class="admin-data">
+        <p class="muted">Loading...</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="admin-footer" style="background: linear-gradient(to right, var(--primary-maroon), var(--header-top-bg)); color: white; text-align: center; padding: 20px; margin-top: 60px;">
+    <p>&copy; Rudra Paithani Yeola. Admin Panel.</p>
+    <div class="footer-links">
+      <a href="terms.html">Terms of Service</a>
+      <a href="privacy.html">Privacy Policy</a>
+                <a href="care-guide.html">Paithani Care Guide</a>
+                <a href="return-refund.html">Return & Refund</a>
+    </div>
+  </footer>
+
+  <script src="js/admin-auth.js"></script>
+  <script src="js/admin-messages.js"></script>
+    <script src="js/back-button.js"></script>
+    <script src="js/whatsapp-chat.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+

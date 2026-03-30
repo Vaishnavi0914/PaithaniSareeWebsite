@@ -1,0 +1,36 @@
+#!/bin/sh
+# Block pushes that include common secret patterns.
+
+set -eu
+
+pattern='(mongodb\+srv://|JWT_SECRET=|RAZORPAY_KEY_ID=|RAZORPAY_KEY_SECRET=|SMTP_PASS=|ADMIN_PASSWORD=|ADMIN_PASSWORD_HASH=|ADMIN_RESET_TOKEN_HASH=|API[_-]?KEY=|SECRET=|TOKEN=|KEY_SECRET=)'
+
+fail=0
+
+while read -r local_ref local_sha remote_ref remote_sha
+do
+  # Skip deletes
+  if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+    continue
+  fi
+
+  # New branch push
+  if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+    range="$local_sha"
+  else
+    range="$remote_sha..$local_sha"
+  fi
+
+  # Scan diff for secret-like patterns
+  if git diff --unified=0 "$range" | grep -E -i "$pattern" >/dev/null 2>&1; then
+    echo "ERROR: Potential secret detected in commits to be pushed."
+    echo "Fix it before pushing. If this is a false positive, edit .githooks/pre-push."
+    fail=1
+  fi
+done
+
+if [ "$fail" -ne 0 ]; then
+  exit 1
+fi
+
+exit 0

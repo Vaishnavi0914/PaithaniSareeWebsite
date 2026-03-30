@@ -1,0 +1,193 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rudra Paithani Yeola | Authentic Sarees</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { position: relative; }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 900px;
+            height: 900px;
+            background-image: url('images/logo.png');
+            background-size: 90%;
+            background-repeat: no-repeat;
+            background-position: center center;
+            opacity: 0.08;
+            z-index: 0;
+            pointer-events: none;
+        }
+        header, section, footer { position: relative; z-index: 1; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-top">
+        </div>
+        <div class="header-main">
+            <div class="logo">
+                <img src="images/logo.png" alt="Rudra Paithani Yeola Logo">
+                <h1>Rudra Paithani Yeola</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html" class="active">Home</a></li>
+                    <li><a href="products.html">Products</a></li>
+                    <li><a href="about.html">About</a></li>
+                    <li><a href="login.html">Login</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+<li><a href="admin-login.html">Admin</a></li>
+                </ul>
+            </nav>
+            <div class="header-cart">
+                <a href="profile.html" class="nav-profile-link" aria-label="User Profile">
+                    <span class="nav-profile-icon">&#128100;</span>
+                </a>
+                <a href="cart.html" class="header-action-link nav-cart-link" aria-label="Cart">
+                    <span class="nav-cart-icon">&#128722;</span>
+                    <span class="nav-cart-badge" data-cart-count>0</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero-section">
+        <div class="hero-content">
+            <h2>Authentic <br>Paithani Sarees</h2>
+            <a href="products.html" class="btn-primary">View Collection</a>
+        </div>
+    </section><section class="featured-products">
+        <h3>Featured Products</h3>
+        <div class="product-grid" id="product-container">
+            </div>
+    </section>
+
+    <!-- Why Shop With Us Section -->
+    <section class="why-shop-section">
+        <div class="why-shop-container">
+            <h2>Why Shop With Us?</h2>
+            <div class="why-shop-grid">
+                <div class="shop-card">
+                    <div class="shop-icon">&#127912;</div>
+                    <h3>Authentic Craftsmanship</h3>
+                    <p>Every saree is handcrafted using traditional Paithani weaving techniques passed down through generations.</p>
+                </div>
+                <div class="shop-card">
+                    <div class="shop-icon">&#10024;</div>
+                    <h3>Premium Quality</h3>
+                    <p>We use only the finest silk and authentic zari, ensuring durability and timeless beauty.</p>
+                </div>
+                <div class="shop-card">
+                    <div class="shop-icon">&#127942;</div>
+                    <h3>Master Weavers</h3>
+                    <p>Our sarees are created by skilled artisans with decades of experience in traditional weaving.</p>
+                </div>
+                <div class="shop-card">
+                    <div class="shop-icon">&#129309;</div>
+                    <h3>Fair Trade Practice</h3>
+                    <p>We ensure fair wages and ethical treatment for all artisans in our supply chain.</p>
+                </div>
+                <div class="shop-card">
+                    <div class="shop-icon">&#127757;</div>
+                    <h3>Global Delivery</h3>
+                    <p>Safe and secure shipping with tracking to customers across the world with premium packaging.</p>
+                </div>
+                <div class="shop-card">
+                    <div class="shop-icon">&#128175;</div>
+                    <h3>Customer Support</h3>
+                    <p>Dedicated support team available to assist you with queries, styling tips, and care advice.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Featured Videos -->
+    <section class="featured-videos">
+        <div class="featured-videos-header">
+            <h3>Featured Videos</h3>
+            <p>See our weavers, motifs, and drapes in motion.</p>
+        </div>
+        <div class="video-grid">
+            <div class="video-card">
+                <video controls autoplay muted loop playsinline poster="images/paithani_weaving.mp4">
+                    <source src="images/paithani_weaving.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <h4>Shankar parvati Paithani</h4>
+            </div>
+            <div class="video-card">
+                <video controls autoplay muted loop playsinline poster="images/video-poster.jpg">
+                    <source src="images/paithani_design.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <h4>Design Detailing</h4>
+            </div>
+            <div class="video-card">
+                <video controls autoplay muted loop playsinline poster="images/video-poster.jpg">
+                    <source src="images/paithani_final_look.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <h4>Final Drape</h4>
+            </div>
+            <div class="video-card">
+                <video controls autoplay muted loop playsinline poster="images/video-poster.jpg">
+                    <source src="images/paithani_story.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <h4>Experience Hand Weaving Process</h4>
+            </div>
+        </div>
+    </section>
+
+        <footer>
+        <div class="footer-content">
+            <div class="footer-info">
+                <p>Email: <a href="https://mail.google.com/mail/?view=cm&fs=1&to=paithanisareewebsite@gmail.com" target="_blank" rel="noopener noreferrer">paithanisareewebsite@gmail.com</a></p>
+                <p>Reach us: Yeola, Nashik, Maharashtra - 423401</p>
+                <p>Phone: +91 7888118137</p>
+                        </div>
+            <div class="footer-links">
+                <a href="terms.html">Terms of Service</a>
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="care-guide.html">Paithani Care Guide</a>
+                <a href="return-refund.html">Return & Refund</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/script.js?v=20260327"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/back-button.js"></script>
+    <script src="js/whatsapp-chat.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

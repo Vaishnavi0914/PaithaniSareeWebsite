@@ -1,0 +1,184 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rudra Paithani Yeola | Our Collection</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { position: relative; }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 900px;
+            height: 900px;
+            background-image: url('images/logo.png');
+            background-size: 90%;
+            background-repeat: no-repeat;
+            background-position: center center;
+            opacity: 0.08;
+            z-index: 0;
+            pointer-events: none;
+        }
+        header, .catalog-controls, .category-pills, .page-title, .product-grid, footer { position: relative; z-index: 1; }
+    </style>
+</head>
+<body class="page-footer-stick">
+    <header>
+        <div class="header-top">
+        </div>
+        <div class="header-main">
+            <div class="logo">
+                <img src="images/logo.png" alt="Rudra Paithani Yeola Logo">
+                <h1>Rudra Paithani Yeola</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="products.html" class="active">Products</a></li>
+                    <li><a href="about.html">About</a></li>
+                    <li><a href="login.html">Login</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+<li><a href="admin-login.html">Admin</a></li>
+                </ul>
+            </nav>
+            <div class="header-cart">
+                <a href="profile.html" class="nav-profile-link" aria-label="User Profile">
+                    <span class="nav-profile-icon">&#128100;</span>
+                </a>
+                <a href="cart.html" class="nav-cart-link" aria-label="Cart">
+                    <span class="nav-cart-icon">&#128722;</span>
+                    <span class="nav-cart-badge" data-cart-count>0</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    
+
+    <section class="catalog-controls">
+        <div class="search-box">
+            <span class="search-icon">&#128270;</span>
+            <input type="search" id="product-search" placeholder="Search sarees by motif, colour, or occasion">
+        </div>
+        <div class="filter-group">
+            <label>
+                Category
+                <select id="filter-category">
+                    <option value="all">All categories</option>
+                </select>
+            </label>
+            <label>
+                Sort
+                <select id="sort-price">
+                    <option value="relevance">Featured</option>
+                    <option value="price-asc">Price: Low to High</option>
+                    <option value="price-desc">Price: High to Low</option>
+                    <option value="name">Name A-Z</option>
+                </select>
+            </label>
+        </div>
+    </section>
+
+    <h2 class="page-title">Our Full Collection</h2>
+
+    <div class="category-pills" aria-label="Filter by category">
+        <button class="category-pill active" data-category="all">
+            <span class="category-icon">
+                <img src="images/logo.png" alt="All categories">
+            </span>
+            <span class="category-label">All</span>
+        </button>
+        <button class="category-pill" data-category="Pure Silk Paithani">
+            <span class="category-icon">
+                <img src="images/All_Over_Work_Paithani.jpg" alt="Pure Silk Paithani">
+            </span>
+            <span class="category-label">Pure Silk</span>
+        </button>
+        <button class="category-pill" data-category="Semi Silk Paithani">
+            <span class="category-icon">
+                <img src="images/Peacock_Border_Semi_Paithani.jpg" alt="Semi Silk Paithani">
+            </span>
+            <span class="category-label">Semi Silk</span>
+        </button>
+        <button class="category-pill" data-category="Paithani Accessories">
+            <span class="category-icon">
+                <img src="images/Paithani_Cap.jpg" alt="Paithani Accessories">
+            </span>
+            <span class="category-label">Accessories</span>
+        </button>
+        <button class="category-pill" data-category="Festival Specials">
+            <span class="category-icon">
+                <img src="images/festival-icon.jpg" alt="Festival Specials">
+            </span>
+            <span class="category-label">Festival</span>
+        </button>
+        <button class="category-pill" data-category="Family">
+            <span class="category-icon">
+                <img src="images/family-icon.jpg" alt="Family Collection">
+            </span>
+            <span class="category-label">Family</span>
+        </button>
+    </div>
+
+    <section class="family-filters is-hidden" id="family-filters" aria-label="Filter by family member">
+        <div class="family-filter-header">
+            <strong>Family Picks</strong>
+            <span>Choose for children, parents, or grandparents.</span>
+        </div>
+        <div class="family-pills">
+            <button class="family-pill active" data-family="all">All Family</button>
+            <button class="family-pill" data-family="Children">Children</button>
+            <button class="family-pill" data-family="Parents">Parents</button>
+            <button class="family-pill" data-family="Grandparents">Grandparents</button>
+        </div>
+    </section>
+
+    <div class="product-grid" id="product-container"></div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-info">
+                <p>Email: <a href="https://mail.google.com/mail/?view=cm&fs=1&to=paithanisareewebsite@gmail.com" target="_blank" rel="noopener noreferrer">paithanisareewebsite@gmail.com</a></p>
+                <p>Reach us: Yeola, Nashik, Maharashtra - 423401</p>
+                <p>Phone: +91 7888118137</p>
+                        </div>
+            <div class="footer-links">
+                <a href="terms.html">Terms of Service</a>
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="care-guide.html">Paithani Care Guide</a>
+                <a href="return-refund.html">Return & Refund</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/script.js?v=20260327"></script>
+    <script src="js/back-button.js"></script>
+    <script src="js/whatsapp-chat.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
