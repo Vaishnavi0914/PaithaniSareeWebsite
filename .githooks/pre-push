@@ -21,12 +21,22 @@ do
     range="$remote_sha..$local_sha"
   fi
 
-  # Scan diff for secret-like patterns
-  if git diff --unified=0 "$range" | grep -E -i "$pattern" >/dev/null 2>&1; then
-    echo "ERROR: Potential secret detected in commits to be pushed."
-    echo "Fix it before pushing. If this is a false positive, edit .githooks/pre-push."
-    fail=1
-  fi
+  # Scan diff for secret-like patterns (skip hooks and env examples)
+  for file in $(git diff --name-only "$range"); do
+    [ -z "$file" ] && continue
+    case "$file" in
+      .githooks/pre-push|*.env.example)
+        continue
+        ;;
+    esac
+    if git diff --unified=0 "$range" -- "$file" | grep -E -i "$pattern" >/dev/null 2>&1; then
+      echo "ERROR: Potential secret detected in commits to be pushed."
+      echo "File: $file"
+      echo "Fix it before pushing. If this is a false positive, edit .githooks/pre-push."
+      fail=1
+      break
+    fi
+  done
 done
 
 if [ "$fail" -ne 0 ]; then
