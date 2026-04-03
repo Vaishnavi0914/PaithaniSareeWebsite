@@ -72,6 +72,8 @@ function applyDesktopViewportScale() {
 }
 
 applyDesktopViewportScale();
+const DEFAULT_PROD_API_BASE = 'https://rudrapaithaniyeola.onrender.com';
+
 function resolveApiBase() {
     const configured = getConfiguredApiBase();
     if (configured) return configured;
@@ -82,7 +84,7 @@ function resolveApiBase() {
     if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
         return 'http://localhost:5000';
     }
-    return origin;
+    return DEFAULT_PROD_API_BASE;
 }
 
 const API_BASE_URL = resolveApiBase();
