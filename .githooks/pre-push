@@ -7,6 +7,22 @@ pattern='(mongodb\+srv://|JWT_SECRET=|RAZORPAY_KEY_ID=|RAZORPAY_KEY_SECRET=|SMTP
 
 fail=0
 
+stdin_file="$(mktemp 2>/dev/null || mktemp -t pre-push.XXXXXX)"
+cleanup() {
+  if [ -n "$stdin_file" ] && [ -f "$stdin_file" ]; then
+    rm -f "$stdin_file"
+  fi
+}
+trap cleanup EXIT
+
+cat > "$stdin_file"
+
+command -v git-lfs >/dev/null 2>&1 || {
+  printf >&2 "\n%s\n\n" "This repository is configured for Git LFS but 'git-lfs' was not found on your path. If you no longer wish to use Git LFS, remove this hook by deleting the 'pre-push' file in the hooks directory (set by 'core.hookspath'; usually '.git/hooks').";
+  exit 2;
+}
+git lfs pre-push "$@" < "$stdin_file"
+
 while read -r local_ref local_sha remote_ref remote_sha
 do
   # Skip deletes
@@ -37,7 +53,7 @@ do
       break
     fi
   done
-done
+done < "$stdin_file"
 
 if [ "$fail" -ne 0 ]; then
   exit 1
