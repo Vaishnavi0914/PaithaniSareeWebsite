@@ -372,6 +372,9 @@ function initMobileNav() {
         const nav = headerMain.querySelector('nav');
         if (!nav) return;
 
+        const actions = headerMain.querySelector('.header-cart, .header-actions');
+        headerMain.classList.toggle('has-actions', Boolean(actions));
+
         const navId = nav.id || `site-nav-${index + 1}`;
         nav.id = navId;
 
@@ -385,7 +388,9 @@ function initMobileNav() {
             toggle.innerHTML = '<span></span><span></span><span></span>';
 
             const logo = headerMain.querySelector('.logo');
-            if (logo && logo.parentElement === headerMain) {
+            if (actions && actions.parentElement === headerMain) {
+                actions.insertAdjacentElement('afterend', toggle);
+            } else if (logo && logo.parentElement === headerMain) {
                 logo.insertAdjacentElement('afterend', toggle);
             } else {
                 headerMain.insertBefore(toggle, nav);
@@ -2211,7 +2216,7 @@ function createProductCard(product) {
         : `<span class="stock-chip ${stockInfo.className}">${stockInfo.label}</span>`;
 
     return `
-        <div class="product-card">
+        <div class="product-card" data-product-id="${productId}">
             <button class="wishlist-btn ${wishlistActive ? 'active' : ''}" data-product-id="${productId}" aria-pressed="${wishlistActive ? 'true' : 'false'}" aria-label="${wishlistActive ? 'Remove from wishlist' : 'Add to wishlist'}">❤</button>
             <img src="${imageUrl}" alt="${product.name}" class="${isPlaceholder ? 'placeholder-img' : ''}">
             <h4>${product.name}</h4>
@@ -2288,40 +2293,48 @@ function renderProducts(products) {
     if (!productGrid.dataset.bound) {
         productGrid.addEventListener('click', (event) => {
             const button = event.target.closest('button');
-            if (!button) return;
-            const productId = button.dataset.productId;
-            if (!productId) return;
-            if (button.classList.contains('wishlist-btn')) {
-                toggleWishlist(productId);
-                return;
-            }
-            if (button.classList.contains('view-details-btn')) {
-                viewDetails(productId);
-                return;
-            }
-            if (button.classList.contains('preorder-btn')) {
-                const product = renderedProductsById.get(String(productId));
-                if (product) {
-                    openPreorderModal(product);
+            if (button) {
+                const productId = button.dataset.productId;
+                if (!productId) return;
+                if (button.classList.contains('wishlist-btn')) {
+                    toggleWishlist(productId);
+                    return;
                 }
-                return;
-            }
-            if (button.classList.contains('add-to-cart-btn')) {
-                const product = renderedProductsById.get(String(productId));
-                if (product) {
-                    const stockInfo = getStockStatus(product);
-                    if (stockInfo.isPreorder) {
+                if (button.classList.contains('view-details-btn')) {
+                    viewDetails(productId);
+                    return;
+                }
+                if (button.classList.contains('preorder-btn')) {
+                    const product = renderedProductsById.get(String(productId));
+                    if (product) {
                         openPreorderModal(product);
-                        return;
                     }
-                    if (stockInfo.isOut) {
-                        alert('Sorry, this item is out of stock right now.');
-                        return;
-                    }
-                    addToCart(product);
-                    alert(`${product.name} added to your cart.`);
+                    return;
                 }
+                if (button.classList.contains('add-to-cart-btn')) {
+                    const product = renderedProductsById.get(String(productId));
+                    if (product) {
+                        const stockInfo = getStockStatus(product);
+                        if (stockInfo.isPreorder) {
+                            openPreorderModal(product);
+                            return;
+                        }
+                        if (stockInfo.isOut) {
+                            alert('Sorry, this item is out of stock right now.');
+                            return;
+                        }
+                        addToCart(product);
+                        alert(`${product.name} added to your cart.`);
+                    }
+                }
+                return;
             }
+
+            const card = event.target.closest('.product-card');
+            if (!card) return;
+            const productId = card.dataset.productId;
+            if (!productId) return;
+            viewDetails(productId);
         });
         productGrid.dataset.bound = '1';
     }
