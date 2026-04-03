@@ -1,6 +1,7 @@
 const ADMIN_TOKEN_KEY = 'adminToken';
 const ADMIN_ACTIVITY_KEY = 'admin_activity_log';
 const ADMIN_API_STORAGE_KEY = 'paithani_api_base';
+const DEFAULT_PROD_API_BASE = 'https://rudrapaithaniyeola.onrender.com';
 
 function sanitizeApiBase(value) {
   if (!value) return '';
@@ -103,7 +104,7 @@ function resolveAdminApiBase() {
   if (window.location.port === '5000') {
     return `${protocol}://${host}:5000`;
   }
-  return origin;
+  return DEFAULT_PROD_API_BASE;
 }
 
 const ADMIN_API_BASE = resolveAdminApiBase();
