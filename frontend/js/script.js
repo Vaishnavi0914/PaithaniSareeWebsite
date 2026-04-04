@@ -1957,9 +1957,13 @@ Customizations: ${selectionText}${noteLine}`);
     }
 }
 
-function setFormMessage(messageEl, text, type = 'error') {
+function setFormMessage(messageEl, text, type = 'error', isHtml = false) {
     if (!messageEl) return;
-    messageEl.textContent = text || '';
+    if (isHtml) {
+        messageEl.innerHTML = text || '';
+    } else {
+        messageEl.textContent = text || '';
+    }
     messageEl.classList.remove('is-error', 'is-success');
     if (text) {
         messageEl.classList.add(type === 'success' ? 'is-success' : 'is-error');
@@ -2881,6 +2885,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) {
                     setFormMessage(forgotMessage, data.error || 'Unable to send reset link. Please try again.');
+                    return;
+                }
+                if (data.resetUrl) {
+                    const safeUrl = String(data.resetUrl || '').replace(/"/g, '&quot;');
+                    setFormMessage(
+                        forgotMessage,
+                        `Reset link generated. <a href="${safeUrl}">Open reset page</a>`,
+                        'success',
+                        true
+                    );
+                    forgotForm.reset();
                     return;
                 }
                 if (data.emailSkipped) {

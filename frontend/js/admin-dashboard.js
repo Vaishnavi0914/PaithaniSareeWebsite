@@ -1,5 +1,16 @@
-﻿const API_BASE = window.ADMIN_API_BASE || (typeof resolveAdminApiBase === 'function' ? resolveAdminApiBase() : (window.location.origin.includes('localhost') ? 'http://localhost:5000' : window.location.origin));
+const DEFAULT_ADMIN_API_BASE = 'https://rudrapaithaniyeola.onrender.com';
 
+function resolveAdminApiBaseSafe() {
+  if (window.ADMIN_API_BASE) return window.ADMIN_API_BASE;
+  if (typeof resolveAdminApiBase === 'function') return resolveAdminApiBase();
+  const origin = window.location.origin || '';
+  const host = window.location.hostname || '';
+  if (!origin || origin === 'null' || origin.startsWith('file:')) return 'http://localhost:5000';
+  if (host === 'localhost' || host === '127.0.0.1') return 'http://localhost:5000';
+  return DEFAULT_ADMIN_API_BASE;
+}
+
+const API_BASE = resolveAdminApiBaseSafe();
 ensureAdminAuth();
 
 let products = [];
@@ -555,7 +566,8 @@ function bindAddForm() {
       alert('Product added');
     } catch (err) {
       console.error(err);
-      alert('Add failed');
+      const message = err?.data?.error || err?.message || 'Add failed';
+      alert(message);
     }
   });
 }
@@ -627,7 +639,8 @@ function bindEditForm() {
       alert('Product updated');
     } catch (err) {
       console.error(err);
-      alert('Update failed');
+      const message = err?.data?.error || err?.message || 'Update failed';
+      alert(message);
     }
   });
 }
@@ -656,7 +669,8 @@ function bindDeleteForm() {
       alert('Product deleted');
     } catch (err) {
       console.error(err);
-      alert('Delete failed');
+      const message = err?.data?.error || err?.message || 'Delete failed';
+      alert(message);
     }
   });
 }
@@ -678,6 +692,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadProducts();
   loadOverview();
 });
+
 
 
 

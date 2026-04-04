@@ -72,10 +72,14 @@ function setAdminLoginMessage(message, type = 'error') {
   }
 }
 
-function setAdminForgotMessage(message, type = 'error') {
+function setAdminForgotMessage(message, type = 'error', isHtml = false) {
   const el = document.getElementById('admin-forgot-message');
   if (!el) return;
-  el.textContent = message || '';
+  if (isHtml) {
+    el.innerHTML = message || '';
+  } else {
+    el.textContent = message || '';
+  }
   el.classList.remove('success');
   if (message) {
     el.classList.add(type === 'success' ? 'success' : 'error');
@@ -155,7 +159,12 @@ function initAdminForgotForm() {
         return;
       }
       if (data.resetUrl) {
-        setAdminForgotMessage(`Reset link generated: ${data.resetUrl}`, 'success');
+        const safeUrl = String(data.resetUrl || '').replace(/"/g, '&quot;');
+        setAdminForgotMessage(
+          `Reset link generated. <a href="${safeUrl}">Open reset page</a>`,
+          'success',
+          true
+        );
       } else {
         setAdminForgotMessage(data.message || 'If the admin account is configured, a reset link has been sent.', 'success');
       }

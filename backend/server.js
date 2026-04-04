@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcrypt');
 const fs = require('fs');
+const vm = require('vm');
 
 // Ensure env vars load even when server.js is started from repo root.
 require('dotenv').config({ path: path.join(__dirname, '.env') });
@@ -135,7 +136,84 @@ const BCRYPT_ROUNDS = Number.isFinite(envBcryptRounds)
 const ENV_PATH = path.join(__dirname, '.env');
 
 // App base URL for password reset links
-const APP_BASE_URL = (process.env.APP_BASE_URL || 'http://localhost:5000').replace(/\/+$/, '');
+const APP_BASE_URL = (process.env.APP_BASE_URL || '').replace(/\/+$/, '');
+
+function resolveAppBaseUrl(req) {
+  if (APP_BASE_URL) return APP_BASE_URL;
+  const origin = String(req?.headers?.origin || '');
+  const referer = String(req?.headers?.referer || '');
+  const candidate = origin || referer;
+  if (candidate) {
+    try {
+      return new URL(candidate).origin;
+    } catch (err) {
+      // ignore malformed origin
+    }
+  }
+  const forwardedProto = req?.headers?.['x-forwarded-proto'];
+  const forwardedHost = req?.headers?.['x-forwarded-host'];
+  const host = req?.headers?.host;
+  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const baseHost = Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost;
+  if (baseHost) return `${proto || 'https'}://${baseHost}`;
+  if (host) return `${proto || req?.protocol || 'http'}://${host}`;
+  return 'http://localhost:5000';
+}
+
+function loadDefaultProducts() {
+  const seedPath = path.join(__dirname, '../frontend/js/script.js');
+  if (!fs.existsSync(seedPath)) return [];
+  try {
+    const content = fs.readFileSync(seedPath, 'utf8');
+    const match = content.match(/const\s+productsData\s*=\s*\[([\s\S]*?)\];/);
+    if (!match) return [];
+    const arrayLiteral = `[${match[1]}]`;
+    const data = vm.runInNewContext(arrayLiteral, {});
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.error('product seed parse error', err);
+    return [];
+  }
+}
+
+function normalizeSeedProduct(item = {}, idx = 0) {
+  const statusRaw = String(item?.status || '').toLowerCase();
+  const status = ['available', 'new', 'preorder', 'soldout'].includes(statusRaw)
+    ? statusRaw
+    : (statusRaw.includes('new') ? 'new' : 'available');
+  const price = Number(item?.price) || 0;
+  const stock = Number.isFinite(Number(item?.stock)) ? Number(item.stock) : 0;
+  const threshold = Number.isFinite(Number(item?.lowStockThreshold)) ? Number(item.lowStockThreshold) : 2;
+  const discountValue = Number(item?.discountValue) || 0;
+  return {
+    name: item?.name || `Product ${idx + 1}`,
+    price,
+    description: item?.description || '',
+    category: item?.category || 'Pure Silk Paithani',
+    familyGroup: item?.familyGroup || '',
+    image: item?.image || item?.img || '',
+    sku: item?.sku || '',
+    status,
+    stock,
+    lowStockThreshold: threshold,
+    discountType: item?.discountType || 'none',
+    discountValue,
+    featured: Boolean(item?.featured),
+    dateAdded: item?.dateAdded ? new Date(item.dateAdded) : new Date()
+  };
+}
+
+async function seedProductsIfEmpty() {
+  const shouldSeed = String(process.env.SEED_PRODUCTS_ON_START || 'true').toLowerCase();
+  if (shouldSeed === 'false' || shouldSeed === '0') return;
+  const count = await Product.countDocuments();
+  if (count > 0) return;
+  const defaults = loadDefaultProducts();
+  if (!defaults.length) return;
+  const docs = defaults.map(normalizeSeedProduct);
+  await Product.insertMany(docs, { ordered: true });
+  console.log(`? Seeded ${docs.length} default products`);
+}
 
 // Email (SMTP) configuration
 const SMTP_HOST = (process.env.SMTP_HOST || '').trim();
@@ -180,7 +258,14 @@ if (!mongoUri) {
 }
 
 mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 })
-  .then(() => console.log('? MongoDB connected successfully'))
+  .then(async () => {
+    console.log('? MongoDB connected successfully');
+    try {
+      await seedProductsIfEmpty();
+    } catch (err) {
+      console.error('? Product seed error:', err);
+    }
+  })
   .catch((err) => {
     console.error('? MongoDB connection error:', err);
     process.exit(1);
@@ -775,7 +860,7 @@ app.post('/auth/forgot-password', async (req, res) => {
       user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
       await user.save();
 
-      const resetUrl = `${APP_BASE_URL}/reset-password.html?token=${token}`;
+      const resetUrl = `${resolveAppBaseUrl(req)}/reset-password.html?token=${token}`;
       const subject = 'Reset your Rudra Paithani account password';
       const text = `We received a request to reset your password.\n\nOpen this link to reset it (valid for 1 hour):\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`;
       const html = `
@@ -783,7 +868,23 @@ app.post('/auth/forgot-password', async (req, res) => {
         <p><a href="${resetUrl}">Click here to reset your password</a> (valid for 1 hour).</p>
         <p>If you did not request this, you can ignore this email.</p>
       `;
-      emailResult = await sendEmail({ to: user.email, subject, text, html });
+      try {
+        if (hasSmtp && mailer) {
+          emailResult = await sendEmail({ to: user.email, subject, text, html });
+        }
+      } catch (err) {
+        console.error('forgot password email error', err);
+        emailResult = { ok: false, skipped: true };
+      }
+
+      if (!hasSmtp || !mailer || emailResult.skipped) {
+        return res.status(200).json({
+          message: 'Reset link generated. Email service is not configured yet.',
+          resetUrl,
+          emailSent: false,
+          emailSkipped: true
+        });
+      }
     }
     return res.status(200).json({
       message: 'If this email is registered, a reset link has been sent.',
@@ -865,19 +966,27 @@ app.post('/admin/forgot-password', async (req, res) => {
       const { token, tokenHash } = createResetToken();
       const expiresAt = Date.now() + 60 * 60 * 1000;
       setAdminResetToken(tokenHash, expiresAt);
-      const resetUrl = `${APP_BASE_URL}/admin-reset-password.html?token=${token}`;
+      const resetUrl = `${resolveAppBaseUrl(req)}/admin-reset-password.html?token=${token}`;
       if (hasSmtp && mailer) {
-        await mailer.sendMail({
-          from: SMTP_FROM,
-          to: ADMIN_EMAIL,
-          subject: 'Reset your admin password',
-          text: `We received a request to reset the admin password.\n\nOpen this link to reset it (valid for 1 hour):\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`,
-          html: `
-            <p>We received a request to reset the admin password.</p>
-            <p><a href="${resetUrl}">Click here to reset it</a> (valid for 1 hour).</p>
-            <p>If you did not request this, you can ignore this email.</p>
-          `
-        });
+        try {
+          await mailer.sendMail({
+            from: SMTP_FROM,
+            to: ADMIN_EMAIL,
+            subject: 'Reset your admin password',
+            text: `We received a request to reset the admin password.\n\nOpen this link to reset it (valid for 1 hour):\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`,
+            html: `
+              <p>We received a request to reset the admin password.</p>
+              <p><a href="${resetUrl}">Click here to reset it</a> (valid for 1 hour).</p>
+              <p>If you did not request this, you can ignore this email.</p>
+            `
+          });
+        } catch (err) {
+          console.error('admin reset email error', err);
+          return res.status(200).json({
+            message: 'Reset link generated. Email service is not configured yet.',
+            resetUrl
+          });
+        }
       } else {
         return res.status(200).json({
           message: 'Reset link generated. SMTP not configured, use the link below.',

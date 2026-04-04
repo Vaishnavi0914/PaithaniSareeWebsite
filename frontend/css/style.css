@@ -3965,6 +3965,7 @@ video {
   .logo {
     flex: 1 1 auto !important;
     min-width: 0 !important;
+    order: 1 !important;
   }
 
   .logo h1 {
@@ -3978,12 +3979,14 @@ video {
   .header-actions {
     margin-left: auto !important;
     flex: 0 0 auto !important;
+    order: 2 !important;
   }
 
   .nav-toggle {
     display: inline-flex !important;
     margin-left: 6px !important;
     flex: 0 0 auto !important;
+    order: 3 !important;
   }
 
   .header-main nav {
@@ -3994,10 +3997,20 @@ video {
     right: 0 !important;
     padding: 0 !important;
     z-index: 2100 !important;
+    order: 4 !important;
   }
 
   .header-main.nav-open nav {
     display: block !important;
+    position: static !important;
+    width: 100% !important;
+    margin-top: 10px !important;
+    flex: 0 0 100% !important;
+  }
+
+  .header-main.nav-open {
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
   }
 
   .header-main.nav-ready nav ul {
