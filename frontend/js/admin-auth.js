@@ -11,6 +11,23 @@ function sanitizeApiBase(value) {
   return trimmed.replace(/\/+$/, '');
 }
 
+function isPrivateIp(value) {
+  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(value)) return false;
+  const [a, b] = value.split('.').map(n => Number(n));
+  if (a === 10) return true;
+  if (a === 127) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  return false;
+}
+
+function isLocalHost(hostname) {
+  const host = String(hostname || '').toLowerCase();
+  if (!host) return false;
+  if (host === 'localhost' || host === '127.0.0.1') return true;
+  return isPrivateIp(host);
+}
+
 function readAdminApiBaseFromMeta() {
   const meta = document.querySelector('meta[name="paithani-admin-api-base"]')
     || document.querySelector('meta[name="paithani-api-base"]');
@@ -54,7 +71,7 @@ function getConfiguredAdminApiBase() {
   const fromMeta = sanitizeApiBase(readAdminApiBaseFromMeta());
   if (fromMeta) return fromMeta;
   const fromStorage = sanitizeApiBase(readAdminApiBaseFromStorage());
-  if (fromStorage) return fromStorage;
+  if (fromStorage && isLocalHost(window.location.hostname || '')) return fromStorage;
   return '';
 }
 
@@ -81,16 +98,6 @@ function resolveAdminApiBase() {
   const host = window.location.hostname || '';
   const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
   const localProtocol = 'http';
-
-  const isPrivateIp = (value) => {
-    if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(value)) return false;
-    const [a, b] = value.split('.').map(n => Number(n));
-    if (a === 10) return true;
-    if (a === 127) return true;
-    if (a === 192 && b === 168) return true;
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    return false;
-  };
 
   if (!origin || origin === 'null' || origin.startsWith('file:')) {
     return 'http://localhost:5000';

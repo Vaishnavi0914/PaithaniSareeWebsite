@@ -56,6 +56,13 @@ function getConfiguredApiBase() {
 }
 function applyDesktopViewportScale() {
     if (window.__desktopScaleApplied) return;
+    const body = document.body;
+    const path = (window.location.pathname || '').toLowerCase();
+    const isAdminPage = (body && /\badmin-/.test(body.className)) || path.includes('admin-');
+    if (isAdminPage) {
+        window.__desktopScaleApplied = true;
+        return;
+    }
     const viewport = document.querySelector('meta[name="viewport"]');
     if (!viewport) return;
     const desktopWidth = 1200;
