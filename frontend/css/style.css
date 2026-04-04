@@ -69,9 +69,9 @@ ul {
 header {
     background: var(--white);
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    position: sticky;
+    position: sticky !important;
     top: 0;
-    z-index: 1000;
+    z-index: 2000 !important;
 }
 
 .header-top {
@@ -114,6 +114,7 @@ header {
     justify-content: space-between;
     align-items: center;
     padding: 15px 8%;
+    position: relative;
 }
 
 .logo {
@@ -3992,7 +3993,7 @@ video {
     left: 0 !important;
     right: 0 !important;
     padding: 0 !important;
-    z-index: 50 !important;
+    z-index: 2100 !important;
   }
 
   .header-main.nav-open nav {
@@ -4011,6 +4012,8 @@ video {
     border: 1px solid rgba(197, 160, 89, 0.4) !important;
     background: var(--white) !important;
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.14) !important;
+    position: relative !important;
+    z-index: 2101 !important;
   }
 
   .header-main.nav-ready nav ul li a {
