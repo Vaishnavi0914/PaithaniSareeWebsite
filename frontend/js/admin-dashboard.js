@@ -1,16 +1,6 @@
-const DEFAULT_ADMIN_API_BASE = 'https://rudrapaithaniyeola.onrender.com';
-
-function resolveAdminApiBaseSafe() {
-  if (window.ADMIN_API_BASE) return window.ADMIN_API_BASE;
-  if (typeof resolveAdminApiBase === 'function') return resolveAdminApiBase();
-  const origin = window.location.origin || '';
-  const host = window.location.hostname || '';
-  if (!origin || origin === 'null' || origin.startsWith('file:')) return 'http://localhost:5000';
-  if (host === 'localhost' || host === '127.0.0.1') return 'http://localhost:5000';
-  return DEFAULT_ADMIN_API_BASE;
-}
-
-const API_BASE = resolveAdminApiBaseSafe();
+const API_BASE = window.ADMIN_API_BASE || (typeof resolveAdminApiBase === 'function'
+  ? resolveAdminApiBase()
+  : (window.location.origin.includes('localhost') ? 'http://localhost:5000' : window.location.origin));
 ensureAdminAuth();
 
 let products = [];
@@ -41,6 +31,17 @@ function cacheProducts(list) {
     localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(Array.isArray(list) ? list : []));
   } catch (err) {
     console.warn('product cache error', err);
+  }
+}
+
+function readCachedProducts() {
+  try {
+    const raw = localStorage.getItem(PRODUCTS_CACHE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.warn('product cache read error', err);
+    return [];
   }
 }
 
@@ -208,32 +209,57 @@ function renderProductList() {
   `;
 }
 
+function productId(p) {
+  if (!p || p._id == null) return '';
+  return typeof p._id === 'object' && p._id.toString ? String(p._id.toString()) : String(p._id);
+}
+
 function populateSelects() {
   const opts = ['productSelect', 'deleteProductSelect'].map(byId).filter(Boolean);
   opts.forEach(sel => {
     sel.innerHTML = '<option value="">Choose a product...</option>' +
-      products.map(p => `<option value="${p._id}">${p.name}</option>`).join('');
+      products.map(p => `<option value="${productId(p)}">${p.name}</option>`).join('');
   });
 }
 
 async function fetchJson(url, options = {}) {
-  return adminFetchJson(url, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
-  });
+  const method = (options.method || 'GET').toUpperCase();
+  const hasBody = options.body != null && String(options.body).length > 0;
+  const baseHeaders = { ...(options.headers || {}) };
+  if (hasBody && !baseHeaders['Content-Type'] && !baseHeaders['content-type']) {
+    baseHeaders['Content-Type'] = 'application/json';
+  }
+  return adminFetchJson(url, { ...options, headers: baseHeaders });
 }
 
 async function loadProducts() {
-    try {
-      products = await fetchJson(`${API_BASE}/products`).catch(() => []);
-      cacheProducts(products);
+  try {
+    const data = await fetchJson(`${API_BASE}/products`);
+    if (!Array.isArray(data)) {
+      throw new Error('Invalid products payload');
+    }
+    products = data;
+    cacheProducts(products);
+    renderProductList();
+    populateSelects();
+    renderLowStockList();
+    renderOverviewSummary();
+    return products;
+  } catch (err) {
+    console.error('load products error', err);
+    const cached = readCachedProducts();
+    if (cached.length) {
+      products = cached;
       renderProductList();
       populateSelects();
       renderLowStockList();
       renderOverviewSummary();
       return products;
-  } catch (err) {
-    console.error('load products error', err);
+    }
+    renderProductList();
+    populateSelects();
+    renderLowStockList();
+    renderOverviewSummary();
     return [];
   }
 }
@@ -566,8 +592,8 @@ function bindAddForm() {
       alert('Product added');
     } catch (err) {
       console.error(err);
-      const message = err?.data?.error || err?.message || 'Add failed';
-      alert(message);
+      const message = err?.data?.error || err?.data?.details || err?.message || 'Add failed';
+      alert(typeof message === 'string' ? message : 'Add failed');
     }
   });
 }
@@ -586,7 +612,7 @@ function bindEditForm() {
   });
 
   select.addEventListener('change', () => {
-    const prod = products.find(p => p._id === select.value);
+    const prod = products.find(p => productId(p) === String(select.value));
     if (!prod) return;
     const categoryValue = prod.category || 'Pure Silk Paithani';
     const familyValue = prod.familyGroup || '';
@@ -627,7 +653,8 @@ function bindEditForm() {
     if (fileName) payload.image = fileName;
     try {
         const updated = await fetchJson(`${API_BASE}/products/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
-        products = products.map(p => p._id === id ? updated : p);
+        const idStr = String(id);
+        products = products.map(p => (productId(p) === idStr ? updated : p));
         cacheProducts(products);
         renderProductList();
         populateSelects();
@@ -639,8 +666,8 @@ function bindEditForm() {
       alert('Product updated');
     } catch (err) {
       console.error(err);
-      const message = err?.data?.error || err?.message || 'Update failed';
-      alert(message);
+      const message = err?.data?.error || err?.data?.details || err?.message || 'Update failed';
+      alert(typeof message === 'string' ? message : 'Update failed');
     }
   });
 }
@@ -655,9 +682,10 @@ function bindDeleteForm() {
     if (!id) return alert('Select a product');
     if (!confirm('Delete this product?')) return;
     try {
-      const product = products.find(p => p._id === id);
+      const idStr = String(id);
+      const product = products.find(p => productId(p) === idStr);
         await fetchJson(`${API_BASE}/products/${id}`, { method: 'DELETE' });
-        products = products.filter(p => p._id !== id);
+        products = products.filter(p => productId(p) !== idStr);
         cacheProducts(products);
         renderProductList();
         populateSelects();
@@ -669,8 +697,8 @@ function bindDeleteForm() {
       alert('Product deleted');
     } catch (err) {
       console.error(err);
-      const message = err?.data?.error || err?.message || 'Delete failed';
-      alert(message);
+      const message = err?.data?.error || err?.data?.details || err?.message || 'Delete failed';
+      alert(typeof message === 'string' ? message : 'Delete failed');
     }
   });
 }
@@ -692,7 +720,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadProducts();
   loadOverview();
 });
-
 
 
 
