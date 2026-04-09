@@ -1,8 +1,14 @@
+(() => {
 ﻿const API_BASE = window.ADMIN_API_BASE || (typeof resolveAdminApiBase === 'function' ? resolveAdminApiBase() : (window.location.origin.includes('localhost') ? 'http://localhost:5000' : window.location.origin));
-
-ensureAdminAuth();
-
 const root = document.getElementById('messages-root');
+const ensureAuth = (typeof ensureAdminAuth === 'function')
+  ? ensureAdminAuth
+  : (typeof window !== 'undefined' ? window.ensureAdminAuth : null);
+const fetchJson = (typeof adminFetchJson === 'function')
+  ? adminFetchJson
+  : (typeof window !== 'undefined' ? window.adminFetchJson : null);
+
+if (ensureAuth) ensureAuth();
 const searchInput = document.getElementById('message-search');
 const statusFilter = document.getElementById('message-status-filter');
 const refreshBtn = document.getElementById('message-refresh');
@@ -95,8 +101,12 @@ function renderMessages(list) {
 
 async function loadMessages() {
   if (!root) return;
+  if (!fetchJson) {
+    root.innerHTML = '<p class="muted">Admin tools failed to load. Please refresh.</p>';
+    return;
+  }
   try {
-    const data = await adminFetchJson(`${API_BASE}/admin/contacts`);
+    const data = await fetchJson(`${API_BASE}/admin/contacts`);
     messages = Array.isArray(data) ? data : [];
     renderMessages(getFilteredMessages());
     if (typeof refreshAdminNotifications === 'function') {
@@ -110,7 +120,7 @@ async function loadMessages() {
 
 async function sendReply(messageId, reply) {
   try {
-    const updated = await adminFetchJson(`${API_BASE}/admin/contacts/${messageId}/reply`, {
+    const updated = await fetchJson(`${API_BASE}/admin/contacts/${messageId}/reply`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reply })
@@ -161,8 +171,14 @@ if (root) {
   });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+const initMessages = () => {
   bindFilters();
   loadMessages();
-});
+};
 
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initMessages);
+} else {
+  initMessages();
+}
+})();

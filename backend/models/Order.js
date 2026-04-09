@@ -23,8 +23,12 @@ const orderSchema = new mongoose.Schema({
     address: { type: String, default: '' }
   },
   items: { type: [orderItemSchema], default: [] },
+  subtotalAmount: { type: Number, default: 0 },
+  shippingAmount: { type: Number, default: 0 },
+  taxAmount: { type: Number, default: 0 },
   totalAmount: { type: Number, default: 0 },
   status: { type: String, default: 'placed' },
+  cancelledAt: { type: Date },
   payment: {
     provider: { type: String, default: '' },
     status: { type: String, default: 'pending' }, // pending | paid | failed

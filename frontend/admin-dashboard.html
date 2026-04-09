@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -52,9 +52,13 @@
         <span class="muted">Need help? Email support.</span>
       </div>
     </aside>
+    <div class="admin-nav-backdrop" id="admin-nav-backdrop"></div>
 
     <div class="admin-content">
       <header class="admin-topbar">
+        <button class="admin-menu-toggle" id="admin-menu-toggle" type="button" aria-label="Toggle navigation">
+          <span></span>
+        </button>
         <div class="admin-topbar-title">
           <h1>Admin Dashboard</h1>
           <p>Overview of store performance and management tools.</p>
@@ -211,7 +215,7 @@
               </div>
               <div>
                 <label for="setting-home-banner">Homepage Banner Text</label>
-                <input id="setting-home-banner" type="text" placeholder="Authentic Paithani elegance" />
+                <input id="setting-home-banner" type="text" placeholder="Rudra Paithani elegance" />
               </div>
               <div>
                 <label for="setting-sale-active">Festival / Sale Active</label>
@@ -338,7 +342,7 @@
                 <label>Product Description:</label>
                 <textarea id="productDescription" required></textarea>
                 <label>Product Image:</label>
-                <input type="file" id="productImage" accept="image/*" required />
+                <input type="file" id="productImage" accept="image/*" />
               <button type="submit">Add Product</button>
             </form>
           </div>
@@ -428,14 +432,14 @@
     </div>
   </div>
 
-  <script src="js/script.js?v=20260327"></script>
-  <script src="js/admin-auth.js"></script>
-  <script src="js/admin-dashboard.js"></script>
+    <script src="js/api-config.js?v=20260405"></script>
+<script src="js/script.js?v=20260405g"></script>
+  <script src="js/admin-auth.js?v=20260405"></script>
+  <script src="js/admin-dashboard.js?v=20260405"></script>
     <script src="js/back-button.js"></script>
     <script src="js/whatsapp-chat.js"></script>
 </body>
 </html>
-
 
 
 

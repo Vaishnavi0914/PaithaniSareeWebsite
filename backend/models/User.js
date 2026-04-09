@@ -28,6 +28,9 @@ const userSchema = new mongoose.Schema({
   defaultAddressId: { type: String, default: '' },
   isBlocked: { type: Boolean, default: false },
   blockedAt: { type: Date },
+  emailVerified: { type: Boolean, default: false },
+  emailVerifyTokenHash: { type: String, default: '' },
+  emailVerifyExpires: { type: Date },
   resetPasswordTokenHash: { type: String, default: '' },
   resetPasswordExpires: { type: Date },
   createdAt: { type: Date, default: Date.now }

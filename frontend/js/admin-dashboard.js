@@ -1,12 +1,61 @@
-const API_BASE = window.ADMIN_API_BASE || (typeof resolveAdminApiBase === 'function'
-  ? resolveAdminApiBase()
-  : (window.location.origin.includes('localhost') ? 'http://localhost:5000' : window.location.origin));
+(() => {
+  if (window.__adminDashboardLoaded) return;
+  window.__adminDashboardLoaded = true;
+
+function resolveAdminApiBaseFallback() {
+  const origin = window.location.origin || '';
+  const host = window.location.hostname || '';
+  const localProtocol = 'http';
+  const isPrivateIp = (value) => {
+    if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(value)) return false;
+    const [a, b] = value.split('.').map(n => Number(n));
+    if (a === 10) return true;
+    if (a === 127) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    return false;
+  };
+  if (!origin || origin === 'null' || origin.startsWith('file:')) {
+    return 'http://localhost:5000';
+  }
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return `${localProtocol}://localhost:5000`;
+  }
+  if (isPrivateIp(host)) {
+    return `${localProtocol}://${host}:5000`;
+  }
+  if (window.location.port === '5000') {
+    return `${window.location.protocol}//${host}:5000`;
+  }
+  return origin;
+}
+
+function enforceLocalApiBase(value) {
+  try {
+    const url = new URL(value);
+    const host = (window.location.hostname || '').toLowerCase();
+    const isLocalHost = host === 'localhost' || host === '127.0.0.1';
+    if (isLocalHost && url.port !== '5000') {
+      return 'http://localhost:5000';
+    }
+    return value;
+  } catch (err) {
+    return value;
+  }
+}
+
+const API_BASE = enforceLocalApiBase(
+  window.ADMIN_API_BASE || (typeof resolveAdminApiBase === 'function'
+    ? resolveAdminApiBase()
+    : resolveAdminApiBaseFallback())
+);
 ensureAdminAuth();
 
 let products = [];
 let ordersCache = [];
 let usersCache = [];
 let messagesCache = [];
+let productsSource = 'api';
 
 const byId = (id) => document.getElementById(id);
 
@@ -15,6 +64,35 @@ const SETTINGS_KEY = 'admin_settings';
 const PRODUCTS_CACHE_KEY = 'store_products_cache';
 const ORDER_STATUS_OPTIONS = ['placed', 'processing', 'shipped', 'delivered', 'cancelled'];
 const PASSWORD_RULE_MESSAGE = 'Password must be at least 8 characters and include a letter, a number, and a special character.';
+let lastProductsError = '';
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+
+// Notification system for better UX
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.className = `admin-notification admin-notification-${type}`;
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'error' ? '#f8d7da' : type === 'success' ? '#d4edda' : '#d1ecf1'};
+    border: 1px solid ${type === 'error' ? '#f5c6cb' : type === 'success' ? '#c3e6cb' : '#bee5eb'};
+    color: ${type === 'error' ? '#721c24' : type === 'success' ? '#155724' : '#0c5460'};
+    padding: 12px 20px;
+    border-radius: 4px;
+    z-index: 10000;
+    max-width: 400px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    animation: slideIn 0.3s ease-out;
+  `;
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease-out';
+    setTimeout(() => notification.remove(), 300);
+  }, 4000);
+}
 
 function isStrongPassword(value) {
   const pwd = String(value || '');
@@ -43,6 +121,66 @@ function readCachedProducts() {
     console.warn('product cache read error', err);
     return [];
   }
+}
+
+function readSeedProducts() {
+  try {
+    if (typeof productsData !== 'undefined' && Array.isArray(productsData)) {
+      return productsData.map((item, idx) => ({
+        _id: item._id || item.id || item.sku || `seed-${idx + 1}`,
+        name: item.name || `Product ${idx + 1}`,
+        price: Number(item.price) || 0,
+        description: item.description || item.desc || '',
+        category: item.category || 'Pure Silk Paithani',
+        familyGroup: item.familyGroup || '',
+        image: item.image || item.img || '',
+        sku: item.sku || '',
+        status: item.status || 'available',
+        stock: Number.isFinite(Number(item.stock)) ? Number(item.stock) : 0,
+        lowStockThreshold: Number.isFinite(Number(item.lowStockThreshold)) ? Number(item.lowStockThreshold) : 2,
+        discountType: item.discountType || 'none',
+        discountValue: Number(item.discountValue) || 0,
+        featured: Boolean(item.featured),
+        dateAdded: item.dateAdded ? new Date(item.dateAdded) : new Date()
+      }));
+    }
+  } catch (err) {
+    console.warn('seed products error', err);
+  }
+  return [];
+}
+
+function setProductActionsState({ canAdd, canEdit, canDelete, hint }) {
+  const states = [
+    { id: 'addProductBtn', enabled: !!canAdd },
+    { id: 'editProductBtn', enabled: !!canEdit },
+    { id: 'deleteProductBtn', enabled: !!canDelete }
+  ];
+  states.forEach(({ id, enabled }) => {
+    const btn = byId(id);
+    if (!btn) return;
+    btn.disabled = !enabled;
+    btn.classList.toggle('is-disabled', !enabled);
+    btn.title = enabled ? '' : (hint || 'Connect backend to manage products.');
+  });
+}
+
+function setProductsSource(source) {
+  productsSource = source;
+  if (source === 'api') {
+    setProductActionsState({ canAdd: true, canEdit: true, canDelete: true });
+    return;
+  }
+  if (source === 'api-empty') {
+    setProductActionsState({
+      canAdd: true,
+      canEdit: false,
+      canDelete: false,
+      hint: 'Add products first to enable edit/delete.'
+    });
+    return;
+  }
+  setProductActionsState({ canAdd: false, canEdit: false, canDelete: false });
 }
 
 function applyDiscount(basePrice, type, value) {
@@ -110,12 +248,22 @@ function renderActivityLog() {
 
 function showModal(id) {
   const el = byId(id);
-  if (el) el.style.display = 'flex';
+  if (!el) return;
+  el.style.display = 'flex';
+  el.classList.add('is-open');
+  document.body.classList.add('modal-open');
+  const content = el.querySelector('.modal-content');
+  if (content) content.scrollTop = 0;
 }
 
 function hideModal(id) {
   const el = byId(id);
-  if (el) el.style.display = 'none';
+  if (!el) return;
+  el.style.display = 'none';
+  el.classList.remove('is-open');
+  if (!document.querySelector('.modal.is-open')) {
+    document.body.classList.remove('modal-open');
+  }
 }
 
 function getStockStatus(product) {
@@ -164,16 +312,44 @@ function toggleFamilyGroupFields(category, selectEl, value = "") {
   }
 }
 
+function readImageInputAsDataUrl(inputEl) {
+  const file = inputEl?.files?.[0];
+  if (!file) return Promise.resolve('');
+  if (!file.type || !file.type.startsWith('image/')) {
+    return Promise.reject(new Error('Please choose a valid image file.'));
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    return Promise.reject(new Error('Image is too large. Please use an image under 2MB.'));
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Unable to read the image file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 
 function renderProductList() {
   const root = byId('admin-data-root');
   if (!root) return;
   if (!products.length) {
-    root.innerHTML = '<p class="muted">No products yet.</p>';
+    const errorNote = lastProductsError
+      ? `<p class="muted">Unable to load products from ${API_BASE}. ${lastProductsError}</p>`
+      : '';
+    root.innerHTML = `<p class="muted">No products yet.</p>${errorNote}`;
     return;
   }
+  const sourceNote = productsSource === 'seed'
+    ? '<p class="muted">Showing seed products (connect backend to manage products).</p>'
+    : (productsSource === 'cache'
+      ? '<p class="muted">Showing cached products (server offline).</p>'
+      : (productsSource === 'api-empty'
+        ? '<p class="muted">Backend is connected. Showing seed list until you add products.</p>'
+        : ''));
   root.innerHTML = `
     <h3>Existing Products</h3>
+    ${sourceNote}
     <table class="admin-table">
       <thead><tr><th>Name</th><th>Category</th><th>Status</th><th>Inventory</th><th>Price</th></tr></thead>
       <tbody>
@@ -217,8 +393,9 @@ function productId(p) {
 function populateSelects() {
   const opts = ['productSelect', 'deleteProductSelect'].map(byId).filter(Boolean);
   opts.forEach(sel => {
+    const items = productsSource === 'api' ? products : [];
     sel.innerHTML = '<option value="">Choose a product...</option>' +
-      products.map(p => `<option value="${productId(p)}">${p.name}</option>`).join('');
+      items.map(p => `<option value="${productId(p)}">${p.name}</option>`).join('');
   });
 }
 
@@ -229,17 +406,40 @@ async function fetchJson(url, options = {}) {
   if (hasBody && !baseHeaders['Content-Type'] && !baseHeaders['content-type']) {
     baseHeaders['Content-Type'] = 'application/json';
   }
-  return adminFetchJson(url, { ...options, headers: baseHeaders });
+  const token = sessionStorage.getItem('adminToken') || '';
+  if (token && !baseHeaders.Authorization) {
+    baseHeaders.Authorization = `Bearer ${token}`;
+  }
+  if (typeof adminFetchJson === 'function') {
+    return adminFetchJson(url, { ...options, headers: baseHeaders });
+  }
+  const res = await fetch(url, { ...options, headers: baseHeaders });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data?.error || 'Request failed');
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
 }
 
 async function loadProducts() {
   try {
-    const data = await fetchJson(`${API_BASE}/products`);
+    lastProductsError = '';
+    const data = await fetchJson(`${API_BASE}/admin/products`);
     if (!Array.isArray(data)) {
       throw new Error('Invalid products payload');
     }
-    products = data;
-    cacheProducts(products);
+    if (!data.length) {
+      const seed = readSeedProducts();
+      products = seed.length ? seed : [];
+      setProductsSource('api-empty');
+    } else {
+      products = data;
+      cacheProducts(products);
+      setProductsSource('api');
+    }
     renderProductList();
     populateSelects();
     renderLowStockList();
@@ -247,15 +447,28 @@ async function loadProducts() {
     return products;
   } catch (err) {
     console.error('load products error', err);
+    lastProductsError = err?.data?.error || err?.message || 'Unable to load products.';
     const cached = readCachedProducts();
     if (cached.length) {
       products = cached;
+      setProductsSource('cache');
       renderProductList();
       populateSelects();
       renderLowStockList();
       renderOverviewSummary();
       return products;
     }
+    const seed = readSeedProducts();
+    if (seed.length) {
+      products = seed;
+      setProductsSource('seed');
+      renderProductList();
+      populateSelects();
+      renderLowStockList();
+      renderOverviewSummary();
+      return products;
+    }
+    setProductsSource('empty');
     renderProductList();
     populateSelects();
     renderLowStockList();
@@ -540,10 +753,16 @@ function bindModals() {
   byId('editProductBtn')?.addEventListener('click', () => showModal('editProductModal'));
   byId('deleteProductBtn')?.addEventListener('click', () => showModal('deleteProductModal'));
   document.querySelectorAll('.modal .close').forEach(btn => {
-    btn.addEventListener('click', () => btn.closest('.modal').style.display = 'none');
+    btn.addEventListener('click', () => {
+      const modal = btn.closest('.modal');
+      if (modal?.id) hideModal(modal.id);
+    });
   });
   window.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) e.target.style.display = 'none';
+    if (e.target.classList.contains('modal')) {
+      const modal = e.target;
+      if (modal?.id) hideModal(modal.id);
+    }
   });
   byId('cancelDelete')?.addEventListener('click', () => hideModal('deleteProductModal'));
 }
@@ -562,38 +781,62 @@ function bindAddForm() {
   });
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    // Validate required fields
+    const name = byId('productName')?.value?.trim();
+    const price = Number(byId('productPrice')?.value);
+    const description = byId('productDescription')?.value?.trim();
+    
+    if (!name) {
+      showNotification('Product name is required', 'error');
+      return;
+    }
+    if (!price || price <= 0) {
+      showNotification('Valid product price is required', 'error');
+      return;
+    }
+    if (!description) {
+      showNotification('Product description is required', 'error');
+      return;
+    }
+    
+    let imageValue = '';
+    try {
+      imageValue = await readImageInputAsDataUrl(byId('productImage'));
+    } catch (err) {
+      showNotification(err?.message || 'Unable to read product image', 'error');
+      return;
+    }
+
     const payload = {
-      name: byId('productName').value.trim(),
-      price: Number(byId('productPrice').value) || 0,
+      name,
+      price,
       discountType: byId('productDiscountType')?.value || 'none',
       discountValue: Number(byId('productDiscountValue')?.value) || 0,
       category: byId('productCategory').value,
       familyGroup: byId('productFamilyGroup')?.value || '',
-        status: byId('productStatus')?.value || 'new',
-      description: byId('productDescription').value.trim(),
-      image: (byId('productImage').files?.[0]?.name) || 'images/logo.png',
-        sku: byId('productSku')?.value?.trim() || '',
-        stock: Number(byId('productStock')?.value) || 0,
-        lowStockThreshold: Number(byId('productLowStock')?.value) || 0,
-        featured: !!byId('productFeatured')?.checked,
-        dateAdded: new Date()
-      };
+      status: byId('productStatus')?.value || 'new',
+      description,
+      image: imageValue || 'images/logo.png',
+      sku: byId('productSku')?.value?.trim() || '',
+      stock: Number(byId('productStock')?.value) || 0,
+      lowStockThreshold: Number(byId('productLowStock')?.value) || 0,
+      featured: !!byId('productFeatured')?.checked,
+      dateAdded: new Date()
+    };
     try {
-        const saved = await fetchJson(`${API_BASE}/products`, { method: 'POST', body: JSON.stringify(payload) });
-        products.unshift(saved);
-        cacheProducts(products);
-        renderProductList();
-        populateSelects();
-        renderLowStockList();
+      showNotification('Adding product...', 'info');
+      await fetchJson(`${API_BASE}/admin/products`, { method: 'POST', body: JSON.stringify(payload) });
+      await loadProducts();
       hideModal('addProductModal');
       form.reset();
       logAdminActivity(`Added product: ${payload.name}`);
       renderActivityLog();
-      alert('Product added');
+      showNotification(`Product "${payload.name}" added successfully`, 'success');
     } catch (err) {
       console.error(err);
-      const message = err?.data?.error || err?.data?.details || err?.message || 'Add failed';
-      alert(typeof message === 'string' ? message : 'Add failed');
+      const message = err?.data?.error || err?.data?.details || err?.message || 'Failed to add product';
+      showNotification(typeof message === 'string' ? message : 'Failed to add product', 'error');
     }
   });
 }
@@ -634,40 +877,67 @@ function bindEditForm() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = select.value;
-    if (!id) return alert('Select a product');
-      const payload = {
-        name: byId('editProductName').value.trim(),
-        price: Number(byId('editProductPrice').value) || 0,
-        discountType: byId('editProductDiscountType')?.value || 'none',
-        discountValue: Number(byId('editProductDiscountValue')?.value) || 0,
-        category: byId('editProductCategory').value,
-        familyGroup: byId('editProductFamilyGroup')?.value || '',
-        status: byId('editProductStatus')?.value || 'available',
-        description: byId('editProductDescription').value.trim(),
-        sku: byId('editProductSku')?.value?.trim() || '',
-        stock: Number(byId('editProductStock')?.value) || 0,
-        lowStockThreshold: Number(byId('editProductLowStock')?.value) || 0,
-        featured: !!byId('editProductFeatured')?.checked
-      };
-    const fileName = byId('editProductImage').files?.[0]?.name;
-    if (fileName) payload.image = fileName;
+    if (!id) {
+      showNotification('Please select a product to edit', 'error');
+      return;
+    }
+    
+    // Validate required fields
+    const name = byId('editProductName')?.value?.trim();
+    const price = Number(byId('editProductPrice')?.value);
+    const description = byId('editProductDescription')?.value?.trim();
+    
+    if (!name) {
+      showNotification('Product name is required', 'error');
+      return;
+    }
+    if (!price || price <= 0) {
+      showNotification('Valid product price is required', 'error');
+      return;
+    }
+    if (!description) {
+      showNotification('Product description is required', 'error');
+      return;
+    }
+    
+    let imageValue = '';
     try {
-        const updated = await fetchJson(`${API_BASE}/products/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
-        const idStr = String(id);
-        products = products.map(p => (productId(p) === idStr ? updated : p));
-        cacheProducts(products);
-        renderProductList();
-        populateSelects();
-        renderLowStockList();
+      imageValue = await readImageInputAsDataUrl(byId('editProductImage'));
+    } catch (err) {
+      if (byId('editProductImage')?.files?.length) {
+        showNotification(err?.message || 'Unable to read product image', 'error');
+        return;
+      }
+    }
+
+    const payload = {
+      name,
+      price,
+      discountType: byId('editProductDiscountType')?.value || 'none',
+      discountValue: Number(byId('editProductDiscountValue')?.value) || 0,
+      category: byId('editProductCategory').value,
+      familyGroup: byId('editProductFamilyGroup')?.value || '',
+      status: byId('editProductStatus')?.value || 'available',
+      description,
+      sku: byId('editProductSku')?.value?.trim() || '',
+      stock: Number(byId('editProductStock')?.value) || 0,
+      lowStockThreshold: Number(byId('editProductLowStock')?.value) || 0,
+      featured: !!byId('editProductFeatured')?.checked
+    };
+    if (imageValue) payload.image = imageValue;
+    try {
+      showNotification('Updating product...', 'info');
+      await fetchJson(`${API_BASE}/admin/products/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      await loadProducts();
       hideModal('editProductModal');
       form.reset();
       logAdminActivity(`Updated product: ${payload.name}`);
       renderActivityLog();
-      alert('Product updated');
+      showNotification(`Product "${payload.name}" updated successfully`, 'success');
     } catch (err) {
       console.error(err);
-      const message = err?.data?.error || err?.data?.details || err?.message || 'Update failed';
-      alert(typeof message === 'string' ? message : 'Update failed');
+      const message = err?.data?.error || err?.data?.details || err?.message || 'Failed to update product';
+      showNotification(typeof message === 'string' ? message : 'Failed to update product', 'error');
     }
   });
 }
@@ -679,31 +949,51 @@ function bindDeleteForm() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = select.value;
-    if (!id) return alert('Select a product');
-    if (!confirm('Delete this product?')) return;
+    if (!id) {
+      showNotification('Please select a product to delete', 'error');
+      return;
+    }
+    if (!confirm('⚠️ This will permanently delete the product. Are you sure?')) return;
+    
     try {
+      showNotification('Deleting product...', 'info');
       const idStr = String(id);
       const product = products.find(p => productId(p) === idStr);
-        await fetchJson(`${API_BASE}/products/${id}`, { method: 'DELETE' });
-        products = products.filter(p => productId(p) !== idStr);
-        cacheProducts(products);
-        renderProductList();
-        populateSelects();
-        renderLowStockList();
+      const productName = product?.name || 'Unknown';
+      
+      await fetchJson(`${API_BASE}/admin/products/${id}`, { method: 'DELETE' });
+      await loadProducts();
       hideModal('deleteProductModal');
       form.reset();
-      logAdminActivity(`Deleted product: ${product?.name || id}`);
+      logAdminActivity(`Deleted product: ${productName}`);
       renderActivityLog();
-      alert('Product deleted');
+      showNotification(`Product "${productName}" deleted successfully`, 'success');
     } catch (err) {
       console.error(err);
-      const message = err?.data?.error || err?.data?.details || err?.message || 'Delete failed';
-      alert(typeof message === 'string' ? message : 'Delete failed');
+      const message = err?.data?.error || err?.data?.details || err?.message || 'Failed to delete product';
+      showNotification(typeof message === 'string' ? message : 'Failed to delete product', 'error');
     }
   });
 }
 
+function bindAdminNavToggle() {
+  const toggleBtn = byId('admin-menu-toggle');
+  const backdrop = byId('admin-nav-backdrop');
+  if (!toggleBtn || !backdrop) return;
+  const closeNav = () => document.body.classList.remove('admin-nav-open');
+  const toggleNav = () => document.body.classList.toggle('admin-nav-open');
+  toggleBtn.addEventListener('click', toggleNav);
+  backdrop.addEventListener('click', closeNav);
+  document.querySelectorAll('.admin-side-nav a, .admin-side-actions a').forEach((link) => {
+    link.addEventListener('click', closeNav);
+  });
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeNav();
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  bindAdminNavToggle();
   bindModals();
   bindAddForm();
   bindEditForm();
@@ -720,8 +1010,4 @@ document.addEventListener('DOMContentLoaded', () => {
   loadProducts();
   loadOverview();
 });
-
-
-
-
-
+})();

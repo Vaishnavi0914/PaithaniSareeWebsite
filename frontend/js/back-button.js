@@ -13,9 +13,8 @@ function initBackButton() {
         || path.endsWith('/admin-reset-password.html')
         || path.endsWith('admin-reset-password.html');
     const headerTop = document.querySelector('.header-top');
-    if (!headerTop && !isAdminAuthPage) {
-        return;
-    }
+    const headerMain = document.querySelector('.header-main');
+    const headerAnchor = headerTop || headerMain;
 
     const button = document.createElement('button');
     button.id = 'back-fab';
@@ -23,7 +22,7 @@ function initBackButton() {
     button.className = isAdminAuthPage ? 'back-fab' : 'back-fab back-fab-header';
     button.setAttribute('aria-label', 'Go back');
     button.title = 'Back';
-    button.innerHTML = '&#8592;';
+    button.innerHTML = '<span class="back-fab-icon" aria-hidden="true"></span>';
     button.setAttribute('aria-label', 'Go back');
 
     const fallback = window.location.pathname.toLowerCase().includes('admin')
@@ -31,40 +30,42 @@ function initBackButton() {
         : 'index.html';
 
     const goBack = () => {
+        const currentPath = window.location.pathname + window.location.search + window.location.hash;
+        let usedHistory = false;
         try {
             const referrer = document.referrer;
             if (referrer) {
                 const refUrl = new URL(referrer);
                 if (refUrl.origin === window.location.origin && window.history.length > 1) {
                     window.history.back();
-                    return;
+                    usedHistory = true;
                 }
             }
         } catch (err) {
             // ignore referrer parsing issues
         }
-        if (window.history.length > 1) {
+        if (!usedHistory && window.history.length > 1) {
             window.history.back();
+            usedHistory = true;
+        }
+        if (!usedHistory) {
+            window.location.href = fallback;
             return;
         }
-        window.location.href = fallback;
+        // If history navigation doesn't change the page, fallback to home.
+        setTimeout(() => {
+            const nextPath = window.location.pathname + window.location.search + window.location.hash;
+            if (nextPath === currentPath) {
+                window.location.href = fallback;
+            }
+        }, 300);
     };
 
     button.addEventListener('click', goBack);
-    if (isAdminAuthPage || !headerTop) {
-        document.body.appendChild(button);
-    } else {
-        headerTop.appendChild(button);
-    }
+    document.body.appendChild(button);
 
-    const updateVisibility = () => {
-        const hasHistory = window.history.length > 1;
-        const hasReferrer = !!document.referrer;
-        button.classList.toggle('is-hidden', !(hasHistory || hasReferrer));
-    };
-
-    updateVisibility();
-    window.addEventListener('popstate', updateVisibility);
+    // Always show the back button for a consistent UI
+    button.classList.remove('is-hidden');
 }
 
 document.addEventListener('DOMContentLoaded', initBackButton);

@@ -1,7 +1,11 @@
+(() => {
+  if (window.__adminAuthLoaded) return;
+  window.__adminAuthLoaded = true;
+
 const ADMIN_TOKEN_KEY = 'adminToken';
 const ADMIN_ACTIVITY_KEY = 'admin_activity_log';
 const ADMIN_API_STORAGE_KEY = 'paithani_api_base';
-const DEFAULT_PROD_API_BASE = 'https://rudrapaithaniyeola.onrender.com';
+const DEFAULT_PROD_API_BASE = '';
 
 function sanitizeApiBase(value) {
   if (!value) return '';
@@ -51,6 +55,22 @@ function readAdminApiBaseFromStorage() {
   }
 }
 
+function safeParseHost(url) {
+  try {
+    return new URL(url).hostname || '';
+  } catch (err) {
+    return '';
+  }
+}
+
+function safeParsePort(url) {
+  try {
+    return new URL(url).port || '';
+  } catch (err) {
+    return '';
+  }
+}
+
 function storeAdminApiBase(value) {
   if (!value) return;
   try {
@@ -71,7 +91,16 @@ function getConfiguredAdminApiBase() {
   const fromMeta = sanitizeApiBase(readAdminApiBaseFromMeta());
   if (fromMeta) return fromMeta;
   const fromStorage = sanitizeApiBase(readAdminApiBaseFromStorage());
-  if (fromStorage && isLocalHost(window.location.hostname || '')) return fromStorage;
+  if (fromStorage && isLocalHost(window.location.hostname || '')) {
+    const storedHost = safeParseHost(fromStorage);
+    const storedPort = safeParsePort(fromStorage);
+    if (isLocalHost(storedHost) && storedPort === '5000') return fromStorage;
+    try {
+      localStorage.removeItem(ADMIN_API_STORAGE_KEY);
+    } catch (err) {
+      // ignore
+    }
+  }
   return '';
 }
 
@@ -111,7 +140,7 @@ function resolveAdminApiBase() {
   if (window.location.port === '5000') {
     return `${protocol}://${host}:5000`;
   }
-  return DEFAULT_PROD_API_BASE;
+  return DEFAULT_PROD_API_BASE || origin;
 }
 
 const ADMIN_API_BASE = resolveAdminApiBase();
@@ -119,16 +148,20 @@ window.ADMIN_API_BASE = ADMIN_API_BASE;
 window.resolveAdminApiBase = resolveAdminApiBase;
 
 function getAdminToken() {
-  return sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
+  return sessionStorage.getItem(ADMIN_TOKEN_KEY)
+    || localStorage.getItem(ADMIN_TOKEN_KEY)
+    || '';
 }
 
 function setAdminToken(token) {
   if (!token) return;
   sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+  localStorage.setItem(ADMIN_TOKEN_KEY, token);
 }
 
 function clearAdminToken() {
   sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
 }
 
 function ensureAdminAuth() {
@@ -154,9 +187,13 @@ async function adminFetch(url, options = {}) {
   const headers = buildAdminHeaders(options.headers || {});
   const res = await fetch(url, { ...options, headers });
   if (res.status === 401 || res.status === 403) {
-    clearAdminToken();
-    if (!window.location.pathname.includes('admin-login.html')) {
-      window.location.href = 'admin-login.html';
+    const urlStr = typeof url === 'string' ? url : '';
+    const isAdminNamespace = /\/admin(\/|$)/.test(urlStr);
+    if (isAdminNamespace) {
+      clearAdminToken();
+      if (!window.location.pathname.includes('admin-login.html')) {
+        window.location.href = 'admin-login.html';
+      }
     }
   }
   return res;
@@ -246,9 +283,17 @@ async function refreshAdminNotifications() {
 }
 
 window.refreshAdminNotifications = refreshAdminNotifications;
+window.ensureAdminAuth = ensureAdminAuth;
+window.adminFetchJson = adminFetchJson;
+window.adminFetch = adminFetch;
+window.getAdminToken = getAdminToken;
+window.setAdminToken = setAdminToken;
+window.clearAdminToken = clearAdminToken;
 
 redirectIfAdminAuthed();
 
 document.addEventListener('DOMContentLoaded', () => {
   refreshAdminNotifications();
 });
+
+})();

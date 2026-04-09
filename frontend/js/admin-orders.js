@@ -1,8 +1,14 @@
+(() => {
 ﻿const API_BASE = window.ADMIN_API_BASE || (typeof resolveAdminApiBase === 'function' ? resolveAdminApiBase() : (window.location.origin.includes('localhost') ? 'http://localhost:5000' : window.location.origin));
-
-ensureAdminAuth();
-
 const root = document.getElementById('orders-root');
+const ensureAuth = (typeof ensureAdminAuth === 'function')
+  ? ensureAdminAuth
+  : (typeof window !== 'undefined' ? window.ensureAdminAuth : null);
+const fetchJson = (typeof adminFetchJson === 'function')
+  ? adminFetchJson
+  : (typeof window !== 'undefined' ? window.adminFetchJson : null);
+
+if (ensureAuth) ensureAuth();
 const searchInput = document.getElementById('order-search');
 const statusFilter = document.getElementById('order-status-filter');
 const refreshBtn = document.getElementById('order-refresh');
@@ -113,8 +119,12 @@ function renderOrders(list) {
 
 async function loadOrders() {
   if (!root) return;
+  if (!fetchJson) {
+    root.innerHTML = '<p class="muted">Admin tools failed to load. Please refresh.</p>';
+    return;
+  }
   try {
-    const data = await adminFetchJson(`${API_BASE}/admin/orders`);
+    const data = await fetchJson(`${API_BASE}/admin/orders`);
     orders = Array.isArray(data) ? data : [];
     renderOrders(getFilteredOrders());
   } catch (err) {
@@ -125,7 +135,7 @@ async function loadOrders() {
 
 async function updateOrderStatus(orderId, status) {
   try {
-    const updated = await adminFetchJson(`${API_BASE}/admin/orders/${orderId}`, {
+    const updated = await fetchJson(`${API_BASE}/admin/orders/${orderId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })
@@ -160,8 +170,14 @@ if (root) {
   });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+const initOrders = () => {
   bindFilters();
   loadOrders();
-});
+};
 
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initOrders);
+} else {
+  initOrders();
+}
+})();

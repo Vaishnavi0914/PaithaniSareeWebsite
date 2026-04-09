@@ -3,31 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forgot Password | Rudra Paithani Yeola</title>
+    <title>Order Confirmation | Rudra Paithani Yeola</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    <style>
-        body { position: relative; }
-        body::before {
-            content: '';
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 900px;
-            height: 900px;
-            background-image: url('images/logo.png');
-            background-size: 90%;
-            background-repeat: no-repeat;
-            background-position: center center;
-            opacity: 0.08;
-            z-index: 0;
-            pointer-events: none;
-        }
-        header, .form-container, footer { position: relative; z-index: 1; }
-    </style>
 </head>
-<body>
+<body class="page-footer-stick">
     <header>
         <div class="header-top">
         </div>
@@ -40,27 +20,88 @@
                 <ul>
                     <li><a href="index.html">Home</a></li>
                     <li><a href="products.html">Products</a></li>
-<li><a href="login.html">Login</a></li>
+                    <li><a href="login.html">Login</a></li>
                     <li><a href="contact.html">Contact</a></li>
-</ul>
+                </ul>
             </nav>
             <div class="header-cart">
                 <a href="profile.html" class="nav-profile-link" aria-label="User Profile">
                     <span class="nav-profile-icon">&#128100;</span>
                 </a>
+                <a href="cart.html" class="nav-cart-link" aria-label="Cart">
+                    <span class="nav-cart-icon">&#128722;</span>
+                    <span class="nav-cart-badge" data-cart-count>0</span>
+                </a>
             </div>
         </div>
     </header>
 
-    <div class="form-container">
-        <h2 class="page-title" style="margin-top:0;">Reset Password</h2>
-        <p class="form-message" id="forgot-message"></p>
-        <form id="forgot-form">
-            <input type="email" id="forgot-email" placeholder="Email Address" required>
-            <button type="submit" class="btn-primary" style="width:100%;">Send Reset Link</button>
-        </form>
-        <p class="form-meta">Remembered your password? <a href="login.html">Login</a></p>
-    </div>
+    <main class="order-confirmation">
+        <section class="order-confirmation-card" id="order-confirmation-content">
+            <div class="order-confirmation-header">
+                <div>
+                    <span class="order-confirmation-kicker">Order Confirmed</span>
+                    <h2>Thank you for your purchase</h2>
+                    <p class="muted">We have received your order and will update you when it ships.</p>
+                </div>
+                <div class="order-confirmation-meta">
+                    <p><strong>Order ID:</strong> <span id="confirm-order-id">-</span></p>
+                    <p><strong>Status:</strong> <span id="confirm-status">Pending</span></p>
+                    <p><strong>Placed:</strong> <span id="confirm-date">-</span></p>
+                </div>
+            </div>
+
+            <div class="order-confirmation-grid">
+                <div class="order-confirmation-block">
+                    <h3>Delivery Details</h3>
+                    <p id="confirm-name">-</p>
+                    <p id="confirm-email">-</p>
+                    <p id="confirm-phone">-</p>
+                    <p id="confirm-address">-</p>
+                </div>
+                <div class="order-confirmation-block">
+                    <h3>Payment Summary</h3>
+                    <div class="order-confirmation-summary">
+                        <div class="order-confirmation-summary-row">
+                            <span>Subtotal</span>
+                            <strong id="confirm-subtotal">₹0</strong>
+                        </div>
+                        <div class="order-confirmation-summary-row">
+                            <span>Shipping</span>
+                            <strong id="confirm-shipping">₹0</strong>
+                        </div>
+                        <div class="order-confirmation-summary-row">
+                            <span>Tax (GST)</span>
+                            <strong id="confirm-tax">₹0</strong>
+                        </div>
+                        <div class="order-confirmation-summary-row total">
+                            <span>Total</span>
+                            <strong id="confirm-total">₹0</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="order-confirmation-block">
+                <h3>Items in Your Order</h3>
+                <div id="confirm-items" class="order-confirmation-items"></div>
+            </div>
+
+            <div class="order-confirmation-actions">
+                <a href="products.html" class="btn-primary">Continue Shopping</a>
+                <a href="contact.html" class="btn-secondary">Need Help?</a>
+            </div>
+        </section>
+
+        <section class="order-confirmation-card is-hidden" id="order-confirmation-empty">
+            <h2>We could not find your order details</h2>
+            <p class="muted">If you just placed an order, please check your email for confirmation or contact our team for help.</p>
+            <div class="order-confirmation-actions">
+                <a href="products.html" class="btn-primary">Back to Products</a>
+                <a href="contact.html" class="btn-secondary">Contact Support</a>
+            </div>
+        </section>
+    </main>
 
     <footer class="site-footer">
   <div class="footer-top">
@@ -140,42 +181,11 @@
   </div>
 </footer>
 
-      <script src="js/api-config.js?v=20260404"></script>
-<script src="js/script.js?v=20260405g"></script>
+    <script src="js/api-config.js?v=20260408"></script>
+    <script src="js/script.js?v=20260408"></script>
     <script src="js/back-button.js"></script>
     <script src="js/whatsapp-chat.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

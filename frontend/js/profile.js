@@ -174,7 +174,7 @@ function renderWishlist(items) {
           <strong>${label}</strong>
           <span>${priceText}</span>
         </div>
-        <button class="wishlist-remove" type="button" data-wishlist-id="${safeId}">Remove</button>
+        <button class="wishlist-remove" type="button" data-wishlist-id="${safeId}" data-id="${safeId}">Remove</button>
       </div>
     `;
   }).join('');
@@ -280,6 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!user || !user.email) {
     localStorage.removeItem('authUser');
     localStorage.removeItem('authToken');
+    localStorage.removeItem('authEmail');
     window.location.href = 'login.html';
     return;
   }
@@ -501,26 +502,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  const WISHLIST_STORAGE_KEY = 'paithani_wishlist';
+  const WISHLIST_STORAGE_KEY = key('wishlist');
+  const WISHLIST_OWNER_KEY = 'wishlist_owner';
 
   const loadWishlistItems = () => {
     const primary = readStorageKey(WISHLIST_STORAGE_KEY, []);
     if (Array.isArray(primary) && primary.length) return primary;
     const legacyProfile = readProfileJson('wishlist', []);
-    const legacyGlobal = readStorageKey('wishlistItems', []);
-    const legacy = (Array.isArray(legacyProfile) && legacyProfile.length)
-      ? legacyProfile
-      : (Array.isArray(legacyGlobal) ? legacyGlobal : []);
-    if (legacy.length) {
-      writeStorageKey(WISHLIST_STORAGE_KEY, legacy);
+    if (Array.isArray(legacyProfile) && legacyProfile.length) {
+      writeStorageKey(WISHLIST_STORAGE_KEY, legacyProfile);
+      return legacyProfile;
     }
-    return legacy;
+    return [];
   };
 
   const saveWishlistItems = (items) => {
     writeStorageKey(WISHLIST_STORAGE_KEY, items);
     writeProfileJson('wishlist', items);
-    writeStorageKey('wishlistItems', items);
+    localStorage.setItem(WISHLIST_OWNER_KEY, profileEmail);
     if (typeof window.updateWishlistButtons === 'function') {
       window.updateWishlistButtons();
     }
@@ -538,7 +537,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     wishlistList.addEventListener('click', (event) => {
       const button = event.target.closest('[data-wishlist-id]');
       if (!button) return;
-      const id = button.getAttribute('data-wishlist-id');
+      const id = button.getAttribute('data-wishlist-id') || button.getAttribute('data-id');
       wishlistItems = wishlistItems.filter((item) => {
         const data = (typeof item === 'string') ? { name: item } : (item || {});
         const itemId = String(data.id || data._id || data.name || '');
@@ -605,6 +604,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     writeProfileJson('notifications', updated);
     setText('preferences-note', 'Preferences saved.');
+    if (typeof window.refreshUserNotifications === 'function') {
+      window.refreshUserNotifications();
+    }
   });
 
   byId('change-password-btn').addEventListener('click', async () => {
@@ -652,16 +654,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  const orders = await loadOrders(token, user);
+  let orders = await loadOrders(token, user);
   const list = byId('orders-list');
-  byId('order-count').textContent = `${orders.length} order${orders.length === 1 ? '' : 's'}`;
-  setText('order-count-hero', orders.length);
+  const hiddenOrders = new Set(readProfileJson('hiddenOrders', []));
 
-  if (!orders.length) {
-    list.innerHTML = '<p class="profile-note">No orders yet.</p>';
-  } else {
-    list.innerHTML = orders.map(o => {
+  const canCancelOrder = (order) => {
+    const status = String(order?.status || '').toLowerCase();
+    if (['cancelled', 'shipped', 'delivered'].includes(status)) return false;
+    const createdAt = new Date(order?.createdAt || 0).getTime();
+    if (!createdAt) return false;
+    const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+    return Date.now() - createdAt <= twoDaysMs;
+  };
+
+  const renderOrdersList = () => {
+    const visible = orders.filter(o => o && o._id && !hiddenOrders.has(String(o._id)));
+    byId('order-count').textContent = `${visible.length} order${visible.length === 1 ? '' : 's'}`;
+    setText('order-count-hero', visible.length);
+
+    if (!visible.length) {
+      list.innerHTML = '<p class="profile-note">No orders yet.</p>';
+      return;
+    }
+
+    list.innerHTML = visible.map(o => {
       const items = (o.items || []).map(i => `<li>${i.qty || 1} × ${i.name || 'Item'}</li>`).join('');
+      const cancellable = canCancelOrder(o);
+      const status = String(o.status || 'placed').toLowerCase();
+      const cancelBtn = cancellable
+        ? `<button class="profile-btn outline" type="button" data-cancel-order="${o._id}">Cancel Order</button>`
+        : '';
+      const removeBtn = status === 'cancelled'
+        ? `<button class="profile-btn ghost" type="button" data-remove-order="${o._id}">Remove from list</button>`
+        : '';
+      const actions = cancelBtn || removeBtn
+        ? `<div class="profile-actions">${cancelBtn}${removeBtn}</div>`
+        : '';
       return `
         <div class="order-card">
           <div class="order-top">
@@ -671,9 +699,41 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="meta">Placed: ${o.createdAt ? new Date(o.createdAt).toLocaleString() : ''}</div>
           <div class="meta">Total: Rs ${(o.totalAmount || 0).toLocaleString('en-IN')}</div>
           <ul class="order-items">${items}</ul>
+          ${actions}
         </div>
       `;
     }).join('');
+  };
+
+  renderOrdersList();
+
+  if (list && list.dataset.boundCancel !== '1') {
+    list.addEventListener('click', async (event) => {
+      const cancelBtn = event.target.closest('[data-cancel-order]');
+      if (cancelBtn) {
+        const orderId = cancelBtn.getAttribute('data-cancel-order');
+        if (!orderId) return;
+        if (!confirm('Cancel this order? You can only cancel within 2 days.')) return;
+        try {
+          const updated = await apiFetchJson(`/orders/${orderId}/cancel`, token, { method: 'POST' });
+          orders = orders.map(order => order._id === orderId ? updated : order);
+          renderOrdersList();
+        } catch (err) {
+          alert(err?.data?.error || 'Unable to cancel order.');
+        }
+        return;
+      }
+
+      const removeBtn = event.target.closest('[data-remove-order]');
+      if (removeBtn) {
+        const orderId = removeBtn.getAttribute('data-remove-order');
+        if (!orderId) return;
+        hiddenOrders.add(String(orderId));
+        writeProfileJson('hiddenOrders', Array.from(hiddenOrders));
+        renderOrdersList();
+      }
+    });
+    list.dataset.boundCancel = '1';
   }
 
   const lastLoginKey = key('lastLogin');
@@ -687,6 +747,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   byId('profile-logout').addEventListener('click', () => {
     localStorage.removeItem('authUser');
     localStorage.removeItem('authToken');
+    localStorage.removeItem('authEmail');
     window.location.href = 'login.html';
   });
   window.__profileInitDone = true;

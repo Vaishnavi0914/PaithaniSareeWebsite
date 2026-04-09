@@ -42,9 +42,10 @@
     </section>
   </main>
 
-  <script src="js/script.js?v=20260327"></script>
-  <script src="js/admin-auth.js"></script>
-  <script src="js/admin.js"></script>
+    <script src="js/api-config.js?v=20260405"></script>
+<script src="js/script.js?v=20260405g"></script>
+  <script src="js/admin-auth.js?v=20260405"></script>
+  <script src="js/admin.js?v=20260405"></script>
     <script src="js/back-button.js"></script>
     <script src="js/whatsapp-chat.js"></script>
   <script>
@@ -66,7 +67,7 @@
           return window.resolveAdminApiBase();
         }
         if (window.ADMIN_API_BASE) return window.ADMIN_API_BASE;
-        return 'https://rudrapaithaniyeola.onrender.com';
+        return 'http://localhost:5000';
       };
 
       form.addEventListener('submit', async function (event) {
@@ -108,6 +109,7 @@
   </script>
 </body>
 </html>
+
 
 
 

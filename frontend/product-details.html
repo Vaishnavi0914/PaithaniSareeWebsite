@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -236,7 +236,7 @@
         .product-actions {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
             margin-top: 12px;
             position: sticky;
             bottom: 0;
@@ -246,18 +246,18 @@
             z-index: 2;
         }
         .product-actions .cta-btn {
-            padding: 10px 12px;
+            padding: 10px 14px;
             font-size: 14px;
             border-radius: 6px;
-            border: 1px solid var(--primary-maroon);
+            border: 1px solid #111;
             background: #fff;
-            color: var(--primary-maroon);
+            color: #111;
             cursor: pointer;
             text-decoration: none;
             text-align: center;
-            transition: all 0.2s ease;
-            flex: 1 1 calc(50% - 10px);
-            min-height: 40px;
+            transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+            flex: 1 1 calc(50% - 8px);
+            min-height: 42px;
         }
         .product-actions .cta-btn.is-disabled {
             opacity: 0.6;
@@ -268,23 +268,23 @@
             flex: 1 1 100%;
         }
         .product-actions .cta-btn:hover {
-            background: var(--primary-maroon);
-            color: #fff;
+            filter: brightness(0.98);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
         }
         .product-actions .primary-buy-btn {
-            background: var(--primary-maroon);
-            color: #fff;
+            background: #ffa41c;
+            color: #111;
+            border-color: #ff8f00;
         }
         .product-actions .primary-buy-btn:hover {
-            background: var(--accent-gold);
-            color: var(--primary-maroon);
+            filter: brightness(0.98);
         }
         .product-actions .secondary-contact-btn {
-            background: #fff7ed;
+            background: #fff;
+            border-color: #111;
         }
         .product-actions .secondary-contact-btn:hover {
-            background: var(--accent-gold);
-            color: #fff;
+            filter: brightness(0.98);
         }
         .action-help {
             margin-top: 8px;
@@ -299,35 +299,36 @@
         .add-to-bag-btn {
             flex: 1;
             padding: 10px 14px;
-            background: linear-gradient(to right, var(--primary-maroon), var(--header-top-bg));
-            color: white;
-            border: none;
-            border-radius: 5px;
+            background: #ffd814;
+            color: #111;
+            border: 1px solid #fcd200;
+            border-radius: 6px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s ease;
+            transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
         }
 
         .add-to-bag-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(75, 22, 28, 0.3);
+            filter: brightness(0.98);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
         }
 
         .back-btn {
             padding: 10px 14px;
-            background: #ccc;
-            color: var(--text-dark);
-            border: none;
+            background: #fff;
+            color: #111;
+            border: 1px solid #111;
             border-radius: 5px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s ease;
+            transition: filter 0.15s ease;
         }
 
         .back-btn:hover {
-            background: #999;
+            filter: brightness(0.98);
         }
 
         @media (max-width: 1024px) {
@@ -627,11 +628,9 @@
                 <ul>
                     <li><a href="index.html">Home</a></li>
                     <li><a href="products.html">Products</a></li>
-                    <li><a href="about.html">About</a></li>
-                    <li><a href="login.html">Login</a></li>
+<li><a href="login.html">Login</a></li>
                     <li><a href="contact.html">Contact</a></li>
-                    <li><a href="admin-login.html">Admin</a></li>
-                </ul>
+</ul>
             </nav>
             <div class="header-cart">
                 <a href="profile.html" class="nav-profile-link" aria-label="User Profile">
@@ -673,11 +672,11 @@
             <div class="customization-section">
                 <h3>Customize Your Product</h3>
                 <div class="custom-options">
-                    <label><input type="checkbox" id="custom-fall-pico"> Fall & Pico (+₹800)</label>
-                    <label><input type="checkbox" id="custom-tassels"> Tassels (+₹1000)</label>
-                    <label><input type="checkbox" id="custom-blouse"> Blouse Stitching (+₹1500)</label>
-                    <label><input type="checkbox" id="custom-gift-wrap"> Gift Wrap (+₹150)</label>
-                    <label><input type="checkbox" id="custom-express"> Express Delivery (+₹500)</label>
+                    <label><input type="checkbox" id="custom-fall-pico"> Fall & Pico (+?800)</label>
+                    <label><input type="checkbox" id="custom-tassels"> Tassels (+?1000)</label>
+                    <label><input type="checkbox" id="custom-blouse"> Blouse Stitching (+?1500)</label>
+                    <label><input type="checkbox" id="custom-gift-wrap"> Gift Wrap (+?150)</label>
+                    <label><input type="checkbox" id="custom-express"> Express Delivery (+?500)</label>
                 </div>
                 <div class="custom-field">
                     <label for="custom-notes">Customization Notes</label>
@@ -686,15 +685,15 @@
                 <div class="custom-summary">
                     <div class="custom-summary-row">
                         <span>Base Price</span>
-                        <strong id="custom-base-price">₹0</strong>
+                        <strong id="custom-base-price">?0</strong>
                     </div>
                     <div class="custom-summary-row">
                         <span>Custom Add-ons</span>
-                        <strong id="custom-addons">₹0</strong>
+                        <strong id="custom-addons">?0</strong>
                     </div>
                     <div class="custom-summary-row total">
                         <span>Total</span>
-                        <strong id="custom-total">₹0</strong>
+                        <strong id="custom-total">?0</strong>
                     </div>
                 </div>
             </div>
@@ -746,28 +745,104 @@
     </div>
 
     <!-- Footer -->
-    <footer>
-        <div class="footer-content">
-            <div class="footer-info">
-                <p>Email: <a href="https://mail.google.com/mail/?view=cm&fs=1&to=paithanisareewebsite@gmail.com" target="_blank" rel="noopener noreferrer">paithanisareewebsite@gmail.com</a></p>
-                <p>Reach us: Yeola, Nashik, Maharashtra - 423401</p>
-                <p>Phone: +91 7888118137</p>
-                        </div>
-            <div class="footer-links">
-                <a href="terms.html">Terms of Service</a>
-                <a href="privacy.html">Privacy Policy</a>
-                <a href="care-guide.html">Paithani Care Guide</a>
-                <a href="return-refund.html">Return & Refund</a>
-            </div>
+    <footer class="site-footer">
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div class="footer-logo-wrap">
+        <img src="images/logo.png" alt="Rudra Paithani Yeola Logo" class="footer-logo">
+        <div class="footer-brand-text">
+          <h3>Rudra Paithani Yeola</h3>
+          <p>Handwoven Paithani sarees from Yeola, crafted with heritage silk and timeless artistry.</p>
         </div>
-    </footer>
+      </div>
+      <div class="footer-contact">
+        <div class="footer-contact-line">
+          <span class="footer-info-icon" aria-hidden="true">&#9993;</span>
+          <a href="mailto:paithanisareewebsite@gmail.com">paithanisareewebsite@gmail.com</a>
+        </div>
+        <div class="footer-contact-line">
+          <span class="footer-info-icon" aria-hidden="true">&#128205;</span>
+          <a href="https://www.google.com/maps?q=Yeola,+Nashik,+Maharashtra+423401" target="_blank" rel="noopener noreferrer">Yeola, Nashik, Maharashtra - 423401</a>
+        </div>
+        <div class="footer-contact-line">
+          <span class="footer-info-icon" aria-hidden="true">&#128222;</span>
+          <a href="tel:+917888118137">+91 7888118137</a>
+        </div>
+      </div>
+      <div class="footer-social">
+        <a href="https://wa.me/917888118137" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+      </div>
+    </div>
+    <div class="footer-newsletter">
+      <h4>Get updates from Rudra</h4>
+      <p>New arrivals, heritage stories, and exclusive offers.</p>
+      <form class="footer-form" action="#" method="post">
+        <input type="email" name="email" placeholder="Enter your email" aria-label="Email address" autocomplete="email" required>
+        <button type="submit">Subscribe</button>
+      </form>
+      <small data-footer-note aria-live="polite">We respect your privacy. Unsubscribe anytime.</small>
+    </div>
+  </div>
+  <div class="footer-grid">
+    <div class="footer-col">
+      <h5>Shop</h5>
+      <a href="index.html">Home</a>
+      <a href="products.html">All Sarees</a>
+      <a href="cart.html">Cart</a>
+      <a href="profile.html">Profile</a>
+    </div>
+    <div class="footer-col">
+      <h5>Account</h5>
+      <a href="login.html">Login</a>
+      <a href="signup.html">Sign Up</a>
+      <a href="forgot-password.html">Forgot Password</a>
+      <a href="verify-email.html">Verify Email</a>
+    </div>
+    <div class="footer-col">
+      <h5>Support</h5>
+      <a href="contact.html">Contact Us</a>
+      <a href="care-guide.html">Paithani Care Guide</a>
+      <a href="return-refund.html">Return & Refund</a>
+      <a href="about.html">About Rudra</a>
+    </div>
+    <div class="footer-col">
+      <h5>Policies</h5>
+      <a href="terms.html">Terms of Service</a>
+      <a href="privacy.html">Privacy Policy</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>� 2026 Rudra Paithani Yeola. All rights reserved.</p>
+    <div class="payment-badges">
+      <span class="payment-badge">Visa</span>
+      <span class="payment-badge">Mastercard</span>
+      <span class="payment-badge">UPI</span>
+      <span class="payment-badge">COD</span>
+    </div>
+    <a class="footer-admin-link" href="admin-login.html">Admin Login</a>
+  </div>
+</footer>
 
     
-    <script src="js/script.js?v=20260327"></script>
+      <script src="js/api-config.js?v=20260404"></script>
+<script src="js/script.js?v=20260405g"></script>
     <script src="js/back-button.js"></script>
     <script src="js/whatsapp-chat.js"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

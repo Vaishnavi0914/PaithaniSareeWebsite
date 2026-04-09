@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const mongoose = require('mongoose');
 const dns = require('dns');
 const cors = require('cors');
@@ -27,8 +27,13 @@ const Cart = require('./models/Cart');
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
-app.use(cors());
-app.use(bodyParser.json());
+app.use(cors({
+  origin: true,
+  methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  maxAge: 86400
+}));
+app.use(bodyParser.json({ limit: '10mb' }));
 
 // Basic security headers (avoid breaking existing frontend scripts)
 app.use((req, res, next) => {
@@ -73,8 +78,8 @@ function createRateLimiter({ windowMs = 15 * 60 * 1000, max = 100, keyGenerator 
 }
 
 const generalLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 300, keyGenerator: (req) => (req.ip || 'unknown') + ':general' });
-const authLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 100, keyGenerator: (req) => (req.ip || 'unknown') + ':auth' });
-const adminAuthLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 120, keyGenerator: (req) => (req.ip || 'unknown') + ':admin-login' });
+const authLimiter = createRateLimiter({ windowMs: 2 * 60 * 1000, max: 60, keyGenerator: (req) => (req.ip || 'unknown') + ':auth' });
+const adminAuthLimiter = createRateLimiter({ windowMs: 2 * 60 * 1000, max: 60, keyGenerator: (req) => (req.ip || 'unknown') + ':admin-login' });
 const paymentLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 30, keyGenerator: (req) => (req.ip || 'unknown') + ':payment' });
 const adminLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 40, keyGenerator: (req) => (req.ip || 'unknown') + ':admin' });
 
@@ -135,11 +140,37 @@ const BCRYPT_ROUNDS = Number.isFinite(envBcryptRounds)
   : DEFAULT_BCRYPT_ROUNDS;
 const ENV_PATH = path.join(__dirname, '.env');
 
+// Auto-hash plaintext admin password if present (writes to backend/.env when possible)
+if (adminPasswordPlain && !adminPasswordHash) {
+  try {
+    const hash = bcrypt.hashSync(adminPasswordPlain, BCRYPT_ROUNDS);
+    adminPasswordHash = hash;
+    adminPasswordPlain = '';
+    const envResult = updateEnvFile({
+      ADMIN_PASSWORD_HASH: hash,
+      ADMIN_PASSWORD: ''
+    });
+    if (envResult.updated) {
+      console.log('Admin password hashed and saved to .env');
+    } else {
+      console.warn('Admin password hashed in memory. Please update backend/.env to persist after restart.');
+    }
+  } catch (err) {
+    console.warn('Unable to hash plaintext admin password automatically', err);
+  }
+}
+
 // App base URL for password reset links
 const APP_BASE_URL = (process.env.APP_BASE_URL || '').replace(/\/+$/, '');
 
 function resolveAppBaseUrl(req) {
-  if (APP_BASE_URL) return APP_BASE_URL;
+  if (APP_BASE_URL) {
+    try {
+      return new URL(APP_BASE_URL).origin;
+    } catch (err) {
+      return String(APP_BASE_URL || '').replace(/\/+$/, '');
+    }
+  }
   const origin = String(req?.headers?.origin || '');
   const referer = String(req?.headers?.referer || '');
   const candidate = origin || referer;
@@ -221,13 +252,25 @@ const SMTP_PORT = Number(process.env.SMTP_PORT || 0);
 const SMTP_USER = (process.env.SMTP_USER || '').trim();
 const SMTP_PASS = process.env.SMTP_PASS || '';
 const SMTP_FROM = (process.env.SMTP_FROM || SMTP_USER || 'paithanisareewebsite@gmail.com').trim();
-const hasSmtp = Boolean(SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS);
+const SMTP_TLS_REJECT_UNAUTHORIZED = String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED || '').trim();
+const smtpRejectUnauthorized = SMTP_TLS_REJECT_UNAUTHORIZED
+  ? !(SMTP_TLS_REJECT_UNAUTHORIZED === '0' || SMTP_TLS_REJECT_UNAUTHORIZED.toLowerCase() === 'false')
+  : true;
+const isPlaceholder = (value = '') => {
+  const lower = String(value || '').toLowerCase();
+  return !lower || lower.includes('example.com') || lower.includes('your_') || lower.includes('changeme');
+};
+const hasSmtp = Boolean(SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS) &&
+  !isPlaceholder(SMTP_HOST) &&
+  !isPlaceholder(SMTP_USER) &&
+  !isPlaceholder(SMTP_PASS);
 const mailer = hasSmtp
   ? nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
       secure: SMTP_PORT === 465,
-      auth: { user: SMTP_USER, pass: SMTP_PASS }
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+      tls: { rejectUnauthorized: smtpRejectUnauthorized }
     })
   : null;
 
@@ -271,12 +314,28 @@ mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 })
     process.exit(1);
   });
 
-function calculateTotalAmount(items = []) {
+const SHIPPING_FREE_THRESHOLD = Number(process.env.SHIPPING_FREE_THRESHOLD || 50000);
+const SHIPPING_FLAT = Number(process.env.SHIPPING_FLAT || 250);
+const TAX_RATE = Number(process.env.TAX_RATE || 0.05);
+
+function roundRupees(value) {
+  return Math.round(Number(value) || 0);
+}
+
+function calculateSubtotal(items = []) {
   return items.reduce((sum, item) => {
     const qty = Number(item.qty) || 0;
     const unit = Number(item.unitPrice) || 0;
     return sum + qty * unit;
   }, 0);
+}
+
+function calculateOrderTotals(items = []) {
+  const subtotal = calculateSubtotal(items);
+  const shipping = subtotal >= SHIPPING_FREE_THRESHOLD ? 0 : (subtotal > 0 ? SHIPPING_FLAT : 0);
+  const tax = roundRupees(subtotal * TAX_RATE);
+  const total = roundRupees(subtotal + shipping + tax);
+  return { subtotal, shipping, tax, total };
 }
 
 async function fetchCartItems(cartId, fallbackItems) {
@@ -620,16 +679,48 @@ app.post('/signup', async (req, res) => {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
+    const shouldVerify = Boolean(hasSmtp && mailer);
+    let verifyToken = '';
+    let verifyTokenHash = '';
+    let verifyExpires = null;
+
+    if (shouldVerify) {
+      verifyToken = crypto.randomBytes(32).toString('hex');
+      verifyTokenHash = crypto.createHash('sha256').update(verifyToken).digest('hex');
+      verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    }
+
     const user = new User({
       name: normalizedName,
       email: normalizedEmail,
       password,
-      phone: normalizedPhone
+      phone: normalizedPhone,
+      emailVerified: shouldVerify ? false : true,
+      emailVerifyTokenHash: verifyTokenHash,
+      emailVerifyExpires: verifyExpires
     });
     await user.save();
 
-    const token = jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    if (shouldVerify) {
+      const verifyUrl = `${resolveAppBaseUrl(req)}/verify-email.html?token=${verifyToken}`;
+      const subject = 'Verify your Rudra Paithani account';
+      const text = `Welcome to Rudra Paithani!\\n\\nPlease verify your email to activate your account:\\n${verifyUrl}\\n\\nThis link is valid for 24 hours.`;
+      const html = `
+        <p>Welcome to Rudra Paithani!</p>
+        <p>Please verify your email to activate your account:</p>
+        <p><a href="${verifyUrl}">Verify my email</a> (valid for 24 hours).</p>
+      `;
+      const emailResult = await sendEmail({ to: user.email, subject, text, html });
+      if (!emailResult.ok) {
+        return res.status(500).json({ error: 'Unable to send verification email. Please try again later.' });
+      }
+      return res.status(201).json({
+        message: 'Verification email sent. Please check your inbox.',
+        needsVerification: true
+      });
+    }
 
+    const token = jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({
       message: 'User registered successfully',
       token,
@@ -638,6 +729,68 @@ app.post('/signup', async (req, res) => {
   } catch (err) {
     console.error('signup error', err);
     res.status(500).json({ error: 'Signup failed' });
+  }
+});
+
+// Verify email
+app.post('/auth/verify-email', async (req, res) => {
+  try {
+    const token = String(req.body?.token || '').trim();
+    if (!token) return res.status(400).json({ error: 'Token is required' });
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({
+      emailVerifyTokenHash: tokenHash,
+      emailVerifyExpires: { $gt: new Date() }
+    });
+    if (!user) {
+      return res.status(400).json({ error: 'Verification link is invalid or expired' });
+    }
+    user.emailVerified = true;
+    user.emailVerifyTokenHash = '';
+    user.emailVerifyExpires = undefined;
+    await user.save();
+    return res.status(200).json({ message: 'Email verified successfully' });
+  } catch (err) {
+    console.error('verify email error', err);
+    return res.status(500).json({ error: 'Unable to verify email' });
+  }
+});
+
+// Resend verification email
+app.post('/auth/resend-verification', async (req, res) => {
+  try {
+    if (!hasSmtp || !mailer) {
+      return res.status(503).json({ error: 'Email service is not configured' });
+    }
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(200).json({ message: 'If this email is registered, a verification link has been sent.' });
+    }
+    if (user.emailVerified !== false) {
+      return res.status(200).json({ message: 'Email is already verified.' });
+    }
+    const token = crypto.randomBytes(32).toString('hex');
+    user.emailVerifyTokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    user.emailVerifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await user.save();
+
+    const verifyUrl = `${resolveAppBaseUrl(req)}/verify-email.html?token=${token}`;
+    const subject = 'Verify your Rudra Paithani account';
+    const text = `Please verify your email to activate your account:\\n${verifyUrl}\\n\\nThis link is valid for 24 hours.`;
+    const html = `
+      <p>Please verify your email to activate your account:</p>
+      <p><a href="${verifyUrl}">Verify my email</a> (valid for 24 hours).</p>
+    `;
+    const result = await sendEmail({ to: user.email, subject, text, html });
+    if (!result.ok) {
+      return res.status(500).json({ error: 'Unable to send verification email' });
+    }
+    return res.status(200).json({ message: 'Verification email sent. Please check your inbox.' });
+  } catch (err) {
+    console.error('resend verification error', err);
+    return res.status(500).json({ error: 'Unable to resend verification email' });
   }
 });
 
@@ -657,6 +810,9 @@ app.post('/login', async (req, res) => {
     if (user.isBlocked) {
       return res.status(403).json({ error: 'Account is blocked. Please contact support.' });
     }
+    if (user.emailVerified === false) {
+      return res.status(403).json({ error: 'Email not verified. Please check your inbox.', needsVerification: true });
+    }
 
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
@@ -665,6 +821,7 @@ app.post('/login', async (req, res) => {
 
     const token = jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
+    rateLimitStore.delete((req.ip || 'unknown') + ':auth');
     res.json({
       message: 'Login successful',
       token,
@@ -844,6 +1001,43 @@ app.get('/orders', requireUserAuth, async (req, res) => {
   }
 });
 
+// Cancel order within 2 days
+app.post('/orders/:id/cancel', requireUserAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select('email');
+    const userEmail = String(user?.email || '').toLowerCase();
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    const orderEmail = String(order?.customer?.email || '').toLowerCase();
+    const belongsToUser = (order.userId && order.userId === String(req.user.userId)) ||
+      (userEmail && orderEmail && userEmail === orderEmail);
+    if (!belongsToUser) {
+      return res.status(403).json({ error: 'Not authorized to cancel this order' });
+    }
+
+    const status = String(order.status || '').toLowerCase();
+    if (['cancelled', 'shipped', 'delivered'].includes(status)) {
+      return res.status(400).json({ error: `Order cannot be cancelled (status: ${status})` });
+    }
+
+    const createdAt = new Date(order.createdAt || 0).getTime();
+    const now = Date.now();
+    const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+    if (!createdAt || now - createdAt > twoDaysMs) {
+      return res.status(400).json({ error: 'Order cancellation window has expired (2 days).' });
+    }
+
+    order.status = 'cancelled';
+    order.cancelledAt = new Date();
+    const updated = await order.save();
+    return res.status(200).json(updated);
+  } catch (err) {
+    console.error('order cancel error', err);
+    return res.status(500).json({ error: 'Unable to cancel order', details: err.message });
+  }
+});
+
 // Forgot password (send reset link)
 app.post('/auth/forgot-password', async (req, res) => {
   try {
@@ -852,7 +1046,7 @@ app.post('/auth/forgot-password', async (req, res) => {
       return res.status(400).json({ error: 'Email is required' });
     }
     const user = await User.findOne({ email });
-    let emailResult = { ok: false, skipped: true };
+    let emailResult = { ok: false, skipped: false };
     if (user) {
       const token = crypto.randomBytes(32).toString('hex');
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
@@ -883,6 +1077,13 @@ app.post('/auth/forgot-password', async (req, res) => {
           resetUrl,
           emailSent: false,
           emailSkipped: true
+        });
+      }
+
+      if (!emailResult.ok) {
+        return res.status(500).json({
+          error: 'Unable to send reset email. Please try again later.',
+          emailSent: false
         });
       }
     }
@@ -947,6 +1148,7 @@ app.post('/admin/login', async (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
   const token = signAdminToken(username);
+  rateLimitStore.delete((req.ip || 'unknown') + ':admin-login');
   return res.status(200).json({ token });
 });
 
@@ -982,15 +1184,17 @@ app.post('/admin/forgot-password', async (req, res) => {
           });
         } catch (err) {
           console.error('admin reset email error', err);
-          return res.status(200).json({
-            message: 'Reset link generated. Email service is not configured yet.',
-            resetUrl
+          return res.status(500).json({
+            error: 'Unable to send reset email. Please try again later.',
+            emailSent: false
           });
         }
       } else {
         return res.status(200).json({
           message: 'Reset link generated. SMTP not configured, use the link below.',
-          resetUrl
+          resetUrl,
+          emailSent: false,
+          emailSkipped: true
         });
       }
     }
@@ -1103,8 +1307,8 @@ app.post('/payments/create-order', async (req, res) => {
       return res.status(409).json({ error: 'Some items are out of stock', issues: inventoryCheck.issues });
     }
 
-    const totalAmount = calculateTotalAmount(items);
-    const amountPaise = Math.round(totalAmount * 100);
+    const totals = calculateOrderTotals(items);
+    const amountPaise = Math.round(totals.total * 100);
     if (amountPaise < 100) return res.status(400).json({ error: 'Amount must be at least Rs 1' });
 
     const receipt = buildRazorpayReceipt(cartId);
@@ -1125,7 +1329,8 @@ app.post('/payments/create-order', async (req, res) => {
       amount: order.amount,
       currency: order.currency,
       receipt: order.receipt,
-      keyId: RAZORPAY_KEY_ID
+      keyId: RAZORPAY_KEY_ID,
+      totals
     });
   } catch (err) {
     const details = err?.error?.description || err?.error?.message || err?.message || '';
@@ -1145,7 +1350,8 @@ app.post('/checkout', async (req, res) => {
     const { cart, items } = await fetchCartItems(cartId, fallbackItems);
     if (!items.length) return res.status(400).json({ error: 'Cart is empty' });
 
-    const totalAmount = calculateTotalAmount(items);
+    const totals = calculateOrderTotals(items);
+    const totalAmount = totals.total;
 
     let paymentInfo = {
       provider: payment?.provider || '',
@@ -1204,6 +1410,9 @@ app.post('/checkout', async (req, res) => {
         address: customer?.address || ''
       },
       items,
+      subtotalAmount: totals.subtotal,
+      shippingAmount: totals.shipping,
+      taxAmount: totals.tax,
       totalAmount,
       status: derivedStatus,
       payment: paymentInfo
@@ -1220,10 +1429,13 @@ app.post('/checkout', async (req, res) => {
     if (customerEmail) {
       const subject = `Order confirmation - ${order._id}`;
       const itemsList = items.map(item => `- ${item.qty || 1} x ${item.name || 'Item'}`).join('\n');
-      const text = `Thank you for your order!\n\nOrder ID: ${order._id}\nTotal: Rs ${totalAmount}\nStatus: ${derivedStatus}\n\nItems:\n${itemsList}\n\nWe will update you when your order ships.`;
+      const text = `Thank you for your order!\n\nOrder ID: ${order._id}\nSubtotal: Rs ${totals.subtotal}\nShipping: Rs ${totals.shipping}\nTax: Rs ${totals.tax}\nTotal: Rs ${totalAmount}\nStatus: ${derivedStatus}\n\nItems:\n${itemsList}\n\nWe will update you when your order ships.`;
       const html = `
         <p>Thank you for your order!</p>
         <p><strong>Order ID:</strong> ${order._id}</p>
+        <p><strong>Subtotal:</strong> Rs ${totals.subtotal}</p>
+        <p><strong>Shipping:</strong> Rs ${totals.shipping}</p>
+        <p><strong>Tax:</strong> Rs ${totals.tax}</p>
         <p><strong>Total:</strong> Rs ${totalAmount}</p>
         <p><strong>Status:</strong> ${derivedStatus}</p>
         <p><strong>Items:</strong></p>
@@ -1236,7 +1448,13 @@ app.post('/checkout', async (req, res) => {
     return res.status(201).json({
       message: paymentInfo.status === 'paid' ? 'Payment successful and order placed' : 'Order placed. Awaiting payment.',
       orderId: order._id,
-      paymentStatus: paymentInfo.status
+      paymentStatus: paymentInfo.status,
+      totals: {
+        subtotal: totals.subtotal,
+        shipping: totals.shipping,
+        tax: totals.tax,
+        total: totalAmount
+      }
     });
   } catch (err) {
     if (inventoryAdjusted) {
@@ -1427,7 +1645,7 @@ app.patch('/admin/contacts/:id/reply', async (req, res) => {
   }
 });
 
-// ============= PRODUCT ENDPOINTS =============
+// ============= PUBLIC PRODUCT ENDPOINTS (for customers) =============
 app.get('/products', async (req, res) => {
   try {
     const products = await Product.find({}).sort({ dateAdded: -1 });
@@ -1450,11 +1668,34 @@ app.get('/products/:id', async (req, res) => {
   }
 });
 
-app.post('/products', async (req, res) => {
+// ============= ADMIN-PROTECTED PRODUCT ENDPOINTS =============
+app.get('/admin/products', async (req, res) => {
+  try {
+    const products = await Product.find({}).sort({ dateAdded: -1 });
+    const response = products.map((product) => ({ ...product.toObject(), stockStatus: computeStockStatus(product) }));
+    return res.status(200).json(response);
+  } catch (err) {
+    console.error('admin fetch products error', err);
+    return res.status(500).json({ error: 'Failed to fetch products', details: err.message });
+  }
+});
+
+app.get('/admin/products/:id', async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+    return res.status(200).json({ ...product.toObject(), stockStatus: computeStockStatus(product) });
+  } catch (err) {
+    console.error('admin fetch single product error', err);
+    return res.status(500).json({ error: 'Failed to fetch product', details: err.message });
+  }
+});
+
+app.post('/admin/products', async (req, res) => {
   try {
     const { name, price, description, image, category, familyGroup, sku, status, stock, lowStockThreshold, discountType, discountValue, featured } = req.body;
 
-    if (!name || price === undefined || !description) {
+    if (!name || price === undefined || !String(description || '').trim()) {
       return res.status(400).json({ error: 'Name, price, and description are required' });
     }
 
@@ -1477,12 +1718,12 @@ app.post('/products', async (req, res) => {
     const saved = await prod.save();
     return res.status(201).json(saved);
   } catch (err) {
-    console.error('save product error', err);
+    console.error('admin save product error', err);
     return res.status(400).json({ error: 'Bad request', details: err.message });
   }
 });
 
-app.put('/products/:id', async (req, res) => {
+app.put('/admin/products/:id', async (req, res) => {
   try {
     const { name, price, description, image, category, familyGroup, sku, status, stock, lowStockThreshold, discountType, discountValue, featured } = req.body;
     const updateData = {};
@@ -1505,20 +1746,33 @@ app.put('/products/:id', async (req, res) => {
     if (!updated) return res.status(404).json({ error: 'Product not found' });
     return res.status(200).json(updated);
   } catch (err) {
-    console.error('update product error', err);
+    console.error('admin update product error', err);
     return res.status(400).json({ error: 'Bad request', details: err.message });
   }
 });
 
-app.delete('/products/:id', async (req, res) => {
+app.delete('/admin/products/:id', async (req, res) => {
   try {
     const removed = await Product.findByIdAndDelete(req.params.id);
     if (!removed) return res.status(404).json({ error: 'Product not found' });
     return res.status(200).json({ message: 'Product deleted successfully', product: removed });
   } catch (err) {
-    console.error('delete product error', err);
+    console.error('admin delete product error', err);
     return res.status(500).json({ error: 'Failed to delete', details: err.message });
   }
+});
+
+// ============= LEGACY PUBLIC ENDPOINTS (deprecated, kept for backward compatibility) =============
+app.post('/products', async (req, res) => {
+  return res.status(403).json({ error: 'Use /admin/products to create products' });
+});
+
+app.put('/products/:id', async (req, res) => {
+  return res.status(403).json({ error: 'Use /admin/products/:id to update products' });
+});
+
+app.delete('/products/:id', async (req, res) => {
+  return res.status(403).json({ error: 'Use /admin/products/:id to delete products' });
 });
 
 // Start server
@@ -1532,16 +1786,3 @@ app.listen(PORT, () => {
   console.log(` Razorpay enabled: ${hasRazorpay ? 'yes' : 'no (set keys in .env)'}`);
   console.log('??????????????????????????????');
 });
-
-
-
-
-
-
-
-
-
-
-
-
-

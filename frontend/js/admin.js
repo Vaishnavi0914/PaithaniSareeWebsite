@@ -103,10 +103,18 @@ function setAdminResetMessage(message, type = 'error') {
 async function adminLogin() {
   const username = document.getElementById("admin-username").value?.trim() || '';
   const password = document.getElementById("admin-password").value || '';
+  if (window.__adminLoginInFlight) return;
 
   if (!username || !password) {
     setAdminLoginMessage('Please enter admin username and password.');
     return;
+  }
+
+  const submitBtn = document.querySelector('#admin-login-form .admin-login-btn');
+  window.__adminLoginInFlight = true;
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.setAttribute('aria-busy', 'true');
   }
 
   try {
@@ -117,6 +125,10 @@ async function adminLogin() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
+      if (res.status === 429) {
+        setAdminLoginMessage('Too many login attempts. Please wait 2 minutes and try again.');
+        return;
+      }
       setAdminLoginMessage(data.error || 'Invalid credentials');
       return;
     }
@@ -132,7 +144,13 @@ async function adminLogin() {
     window.location.href = "admin-dashboard.html";
   } catch (err) {
     console.error('admin login error', err);
-    setAdminLoginMessage('Unable to reach server. Please try again.');
+    setAdminLoginMessage(`Unable to reach server at ${API_BASE}. Start the backend and try again.`);
+  } finally {
+    window.__adminLoginInFlight = false;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.removeAttribute('aria-busy');
+    }
   }
 }
 
@@ -170,7 +188,7 @@ function initAdminForgotForm() {
       }
     } catch (err) {
       console.error('admin forgot error', err);
-      setAdminForgotMessage('Unable to reach server. Please try again.');
+      setAdminForgotMessage(`Unable to reach server at ${API_BASE}. Start the backend and try again.`);
     }
   });
   form.dataset.bound = '1';
@@ -217,7 +235,7 @@ function initAdminResetForm() {
       setTimeout(() => { window.location.href = 'admin-login.html'; }, 1000);
     } catch (err) {
       console.error('admin reset error', err);
-      setAdminResetMessage('Unable to reach server. Please try again.');
+      setAdminResetMessage(`Unable to reach server at ${API_BASE}. Start the backend and try again.`);
     }
   });
   form.dataset.bound = '1';

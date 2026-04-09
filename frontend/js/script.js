@@ -1,5 +1,9 @@
 ﻿const API_BASE = (window.location.origin.includes('localhost') ? 'http://localhost:5000' : window.location.origin);
 const API_CONFIG_STORAGE_KEY = 'paithani_api_base';
+const CHECKOUT_TAX_RATE = 0.05;
+const CHECKOUT_SHIPPING_FREE_THRESHOLD = 50000;
+const CHECKOUT_SHIPPING_FLAT = 250;
+const ORDER_CONFIRMATION_KEY = 'paithani_order_confirmation';
 
 function sanitizeApiBase(value) {
     if (!value) return '';
@@ -55,31 +59,13 @@ function getConfiguredApiBase() {
     return '';
 }
 function applyDesktopViewportScale() {
-    if (window.__desktopScaleApplied) return;
-    const body = document.body;
-    const path = (window.location.pathname || '').toLowerCase();
-    const isAdminPage = (body && /\badmin-/.test(body.className)) || path.includes('admin-');
-    if (isAdminPage) {
-        window.__desktopScaleApplied = true;
-        return;
-    }
     const viewport = document.querySelector('meta[name="viewport"]');
     if (!viewport) return;
-    const desktopWidth = 1200;
-    const deviceWidth = (window.screen && window.screen.width) ? window.screen.width : (window.innerWidth || 0);
-    if (deviceWidth && deviceWidth < desktopWidth) {
-        const scale = Math.max(0.25, Math.min(1, deviceWidth / desktopWidth));
-        viewport.setAttribute('content', `width=${desktopWidth}, initial-scale=${scale}`);
-        document.documentElement.classList.add('desktop-scale');
-    } else {
-        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-        document.documentElement.classList.remove('desktop-scale');
-    }
-    window.__desktopScaleApplied = true;
+    viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 }
 
 applyDesktopViewportScale();
-const DEFAULT_PROD_API_BASE = 'https://rudrapaithaniyeola.onrender.com';
+const DEFAULT_PROD_API_BASE = '';
 
 function resolveApiBase() {
     const configured = getConfiguredApiBase();
@@ -91,7 +77,7 @@ function resolveApiBase() {
     if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
         return 'http://localhost:5000';
     }
-    return DEFAULT_PROD_API_BASE;
+    return DEFAULT_PROD_API_BASE || origin;
 }
 
 const API_BASE_URL = resolveApiBase();
@@ -120,6 +106,26 @@ function getNotifyEmail() {
     return contactEmail ? String(contactEmail).toLowerCase() : '';
 }
 
+function readUserNotificationPrefs(email) {
+    const normalized = String(email || '').trim().toLowerCase();
+    if (!normalized) {
+        return { orders: true, promos: false, messages: true };
+    }
+    const key = `profile:${normalized}:notifications`;
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return { orders: true, promos: false, messages: true };
+        const parsed = JSON.parse(raw);
+        return {
+            orders: parsed?.orders !== false,
+            promos: !!parsed?.promos,
+            messages: parsed?.messages !== false
+        };
+    } catch (err) {
+        return { orders: true, promos: false, messages: true };
+    }
+}
+
 function updateProfileLinks() {
     const links = document.querySelectorAll('.nav-profile-link');
     if (!links.length) return;
@@ -136,6 +142,10 @@ function updateProfileLinks() {
 }
 
 function ensureNotifyBell() {
+    const path = (window.location.pathname || '').toLowerCase();
+    if (path.endsWith('/') || path.endsWith('index.html')) {
+        return;
+    }
     const headerCart = document.querySelector('.header-cart, .header-actions');
     if (!headerCart || headerCart.querySelector('.nav-notify-link')) return;
     const wrapper = document.createElement('div');
@@ -282,7 +292,10 @@ async function refreshUserNotifications() {
     ensureNotifyBell();
     const email = getNotifyEmail();
     const listEl = document.querySelector('[data-notify-list]');
-    const marketingItems = buildMarketingNotifications();
+    const prefs = readUserNotificationPrefs(email);
+    const marketingItems = prefs.promos ? buildMarketingNotifications() : [];
+    const allowMessages = prefs.messages !== false;
+
     if (!email) {
         setNotifyBadgeCount(0);
         if (listEl) {
@@ -309,7 +322,10 @@ async function refreshUserNotifications() {
             return;
         }
         const list = Array.isArray(data) ? data : [];
-        const replies = list.filter(msg => msg && String(msg.reply || '').trim());
+        const replies = allowMessages ? list.filter(msg => msg && String(msg.reply || '').trim()) : [];
+        if (!allowMessages) {
+            setNotifyBadgeCount(0);
+        }
         notifyReplyCache = replies;
         const unread = replies.filter(msg => {
             if (!msg || !String(msg.reply || '').trim()) return false;
@@ -372,6 +388,53 @@ function setActiveNavLink() {
             link.classList.remove("active");
         }
     });
+}
+
+let inlineMessageTimer;
+
+function showInlineMessage(message, type = 'success') {
+    const header = document.querySelector('header');
+    if (!header) return;
+
+    let bar = document.querySelector('.inline-message');
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.className = 'inline-message';
+        bar.style.position = 'fixed';
+        bar.style.left = '0';
+        bar.style.right = '0';
+        bar.style.zIndex = '1999';
+
+        const text = document.createElement('span');
+        text.className = 'inline-message-text';
+
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'inline-message-close';
+        close.setAttribute('aria-label', 'Close notification');
+        close.textContent = '×';
+        close.addEventListener('click', () => {
+            if (inlineMessageTimer) clearTimeout(inlineMessageTimer);
+            bar.remove();
+        });
+
+        bar.appendChild(text);
+        bar.appendChild(close);
+        header.insertAdjacentElement('afterend', bar);
+    }
+
+    const headerHeight = header.getBoundingClientRect().height || 0;
+    bar.style.top = `${Math.max(0, Math.round(headerHeight))}px`;
+
+    const textEl = bar.querySelector('.inline-message-text');
+    if (textEl) textEl.textContent = message;
+    bar.classList.remove('inline-message-success', 'inline-message-error', 'inline-message-info');
+    bar.classList.add(`inline-message-${type}`);
+
+    if (inlineMessageTimer) clearTimeout(inlineMessageTimer);
+    inlineMessageTimer = setTimeout(() => {
+        bar.remove();
+    }, 3500);
 }
 
 function initMobileNav() {
@@ -713,12 +776,90 @@ function getStockStatus(product) {
     }
     return { stock, threshold, label: 'In stock', className: 'stock-in', isOut: false, isLow: false, isPreorder: false };
 }
-const CART_KEY = 'paithani_cart';
-const CART_ID_KEY = 'paithani_cart_id';
-const WISHLIST_KEY = 'paithani_wishlist';
+const CART_KEY_BASE = 'paithani_cart';
+const CART_ID_KEY_BASE = 'paithani_cart_id';
+const CART_OWNER_KEY = 'cart_owner';
+const WISHLIST_KEY_BASE = 'paithani_wishlist';
+const WISHLIST_OWNER_KEY = 'wishlist_owner';
 const PRODUCTS_CACHE_KEY = 'store_products_cache';
 
 let wishlistIds = new Set();
+
+const normalizeWishlistEmail = (value) => String(value || '').trim().toLowerCase();
+
+function getWishlistProfileEmail() {
+    try {
+        const raw = localStorage.getItem('authUser');
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            const email = normalizeWishlistEmail(parsed?.email || '');
+            if (email) return email;
+        }
+    } catch (err) {
+        // ignore
+    }
+    return normalizeWishlistEmail(localStorage.getItem('authEmail') || '');
+}
+
+function getWishlistStorageKey() {
+    const email = getWishlistProfileEmail();
+    if (!email) return WISHLIST_KEY_BASE;
+    return `profile:${email}:wishlist`;
+}
+
+function getCartProfileEmail() {
+    return getWishlistProfileEmail();
+}
+
+function getCartStorageKey() {
+    const email = getCartProfileEmail();
+    if (!email) return CART_KEY_BASE;
+    return `profile:${email}:cart`;
+}
+
+function getCartIdStorageKey() {
+    const email = getCartProfileEmail();
+    if (!email) return CART_ID_KEY_BASE;
+    return `profile:${email}:cart_id`;
+}
+
+function loadWishlist() {
+    const email = getWishlistProfileEmail();
+    const key = getWishlistStorageKey();
+    try {
+        const raw = localStorage.getItem(key);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+        console.warn('wishlist parse error', err);
+    }
+
+    if (email) {
+        return [];
+    }
+
+    try {
+        const raw = localStorage.getItem(WISHLIST_KEY_BASE);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+        console.warn('wishlist parse error', err);
+        return [];
+    }
+}
+
+function saveWishlist(list) {
+    const email = getWishlistProfileEmail();
+    const key = getWishlistStorageKey();
+    localStorage.setItem(key, JSON.stringify(list));
+    if (!email) {
+        localStorage.setItem(WISHLIST_KEY_BASE, JSON.stringify(list));
+    }
+    wishlistIds = new Set(list.map(item => String(item.id || item._id)));
+    updateWishlistButtons();
+    renderWishlistSection();
+}
+
 
 function cacheProducts(list) {
     try {
@@ -740,10 +881,11 @@ function readCachedProducts() {
 }
 
 function getCartId() {
-    let cartId = localStorage.getItem(CART_ID_KEY);
+    const key = getCartIdStorageKey();
+    let cartId = localStorage.getItem(key);
     if (!cartId) {
         cartId = 'cart_' + Date.now() + '_' + Math.random().toString(16).slice(2, 8);
-        localStorage.setItem(CART_ID_KEY, cartId);
+        localStorage.setItem(key, cartId);
     }
     return cartId;
 }
@@ -751,8 +893,22 @@ function getCartId() {
 let renderedProductsById = new Map();
 
 function loadCart() {
+    const email = getCartProfileEmail();
+    const key = getCartStorageKey();
     try {
-        const raw = localStorage.getItem(CART_KEY);
+        const raw = localStorage.getItem(key);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+        console.error('cart parse error', err);
+    }
+
+    if (email) {
+        return [];
+    }
+
+    try {
+        const raw = localStorage.getItem(CART_KEY_BASE);
         const parsed = raw ? JSON.parse(raw) : [];
         return Array.isArray(parsed) ? parsed : [];
     } catch (err) {
@@ -762,7 +918,15 @@ function loadCart() {
 }
 
 function saveCart(cart) {
-    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    const email = getCartProfileEmail();
+    const key = getCartStorageKey();
+    localStorage.setItem(key, JSON.stringify(cart));
+    if (!email) {
+        localStorage.setItem(CART_KEY_BASE, JSON.stringify(cart));
+    } else {
+        localStorage.setItem(CART_OWNER_KEY, email);
+    }
+
     updateCartBadge();
     syncCartToBackend(cart);
 }
@@ -786,7 +950,7 @@ async function loadCartFromBackend() {
         if (!res.ok) return;
         const data = await res.json();
         if (Array.isArray(data.items)) {
-            localStorage.setItem(CART_KEY, JSON.stringify(data.items));
+            localStorage.setItem(getCartStorageKey(), JSON.stringify(data.items));
         }
     } catch (err) {
         console.error('cart load error', err);
@@ -856,28 +1020,14 @@ function updateCartBadge() {
 }
 
 function calculateCartTotals(cart) {
-    const total = cart.reduce((sum, item) => sum + (Number(item.unitPrice) || 0) * (Number(item.qty) || 0), 0);
+    const subtotal = cart.reduce((sum, item) => sum + (Number(item.unitPrice) || 0) * (Number(item.qty) || 0), 0);
     const count = cart.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
-    return { total, count };
+    const shipping = subtotal >= CHECKOUT_SHIPPING_FREE_THRESHOLD ? 0 : (subtotal > 0 ? CHECKOUT_SHIPPING_FLAT : 0);
+    const tax = Math.round(subtotal * CHECKOUT_TAX_RATE);
+    const total = Math.round(subtotal + shipping + tax);
+    return { subtotal, shipping, tax, total, count };
 }
 
-function loadWishlist() {
-    try {
-        const raw = localStorage.getItem(WISHLIST_KEY);
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed : [];
-    } catch (err) {
-        console.warn('wishlist parse error', err);
-        return [];
-    }
-}
-
-function saveWishlist(list) {
-    localStorage.setItem(WISHLIST_KEY, JSON.stringify(list));
-    wishlistIds = new Set(list.map(item => String(item.id || item._id)));
-    updateWishlistButtons();
-    renderWishlistSection();
-}
 
 function updateWishlistButtons() {
     document.querySelectorAll('.wishlist-btn').forEach(btn => {
@@ -937,15 +1087,15 @@ function renderWishlistSection() {
                 <strong>${item.name}</strong>
                 <span>${formatPrice(item.price)}</span>
             </div>
-            <button class="wishlist-remove" data-id="${item.id}">Remove</button>
+            <button class="wishlist-remove" data-id="${item.id}" data-wishlist-id="${item.id}">Remove</button>
         </div>
     `).join('');
 
     if (!listEl.dataset.bound) {
         listEl.addEventListener('click', (event) => {
-            const button = event.target.closest('button');
+            const button = event.target.closest('button[data-id], button[data-wishlist-id]');
             if (!button) return;
-            const id = button.dataset.id;
+            const id = button.dataset.id || button.dataset.wishlistId;
             if (!id) return;
             toggleWishlist(id);
         });
@@ -979,6 +1129,13 @@ function initCheckout() {
     const messageEl = document.getElementById('checkout-message');
     const helperEl = document.getElementById('payment-helper');
     if (!form) return;
+    const nameEl = document.getElementById('checkout-name');
+    const emailEl = document.getElementById('checkout-email');
+    const phoneEl = document.getElementById('checkout-phone');
+    const addressLineEl = document.getElementById('checkout-address-line');
+    const cityEl = document.getElementById('checkout-city');
+    const stateEl = document.getElementById('checkout-state');
+    const pincodeEl = document.getElementById('checkout-pincode');
 
     const getPaymentMethod = () => {
         const selected = form.querySelector('input[name="payment-method"]:checked');
@@ -1033,6 +1190,52 @@ function initCheckout() {
 
     const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
 
+    const buildAddressString = ({ line, city, state, pincode }) => {
+        const parts = [line, city, state].map(part => String(part || '').trim()).filter(Boolean);
+        const zip = String(pincode || '').trim();
+        const main = parts.join(', ');
+        if (zip) {
+            return `${main}${main ? ' ' : ''}${zip}`.trim();
+        }
+        return main;
+    };
+
+    const storeOrderConfirmation = (payload) => {
+        if (!payload) return;
+        try {
+            sessionStorage.setItem(ORDER_CONFIRMATION_KEY, JSON.stringify(payload));
+        } catch (err) {
+            // ignore storage errors
+        }
+    };
+
+    const buildOrderConfirmationPayload = ({ orderId, paymentStatus, totals, customer, cart }) => {
+        const safeTotals = totals || calculateCartTotals(cart || []);
+        return {
+            orderId: orderId || '',
+            paymentStatus: paymentStatus || 'pending',
+            totals: {
+                subtotal: Number(safeTotals.subtotal) || 0,
+                shipping: Number(safeTotals.shipping) || 0,
+                tax: Number(safeTotals.tax) || 0,
+                total: Number(safeTotals.total) || 0
+            },
+            customer: {
+                name: customer?.name || '',
+                email: customer?.email || '',
+                phone: customer?.phone || '',
+                address: customer?.address || ''
+            },
+            items: (cart || []).map(item => ({
+                name: item.name || 'Item',
+                qty: Number(item.qty) || 1,
+                unitPrice: Number(item.unitPrice) || 0,
+                image: item.image || ''
+            })),
+            placedAt: new Date().toISOString()
+        };
+    };
+
     const saveAddressToProfile = (email, rawAddress) => {
         const normalizedEmail = normalizeEmail(email);
         if (!normalizedEmail || !rawAddress) return;
@@ -1083,6 +1286,9 @@ function initCheckout() {
             _id: `local_${Date.now()}`,
             createdAt: new Date().toISOString(),
             status,
+            subtotalAmount: totals.subtotal,
+            shippingAmount: totals.shipping,
+            taxAmount: totals.tax,
             totalAmount: totals.total,
             items: cart.map(item => ({
                 name: item.name,
@@ -1124,13 +1330,23 @@ function initCheckout() {
         setFormMessage(messageEl, '');
         toggleButton(true, 'Processing...');
 
-        const name = document.getElementById('checkout-name')?.value?.trim();
-        const email = document.getElementById('checkout-email')?.value?.trim();
-        const phone = document.getElementById('checkout-phone')?.value?.trim();
-        const address = document.getElementById('checkout-address')?.value?.trim();
+        const name = nameEl?.value?.trim();
+        const email = emailEl?.value?.trim();
+        const phone = phoneEl?.value?.trim();
+        const addressLine = addressLineEl?.value?.trim();
+        const city = cityEl?.value?.trim();
+        const state = stateEl?.value?.trim();
+        const pincode = pincodeEl?.value?.trim();
+        const pincodeOk = /^\d{6}$/.test(pincode || '');
+        const address = buildAddressString({ line: addressLine, city, state, pincode });
 
-        if (!name || !email || !phone || !address) {
+        if (!name || !email || !phone || !addressLine || !city || !state || !pincode) {
             setFormMessage(messageEl, 'Please fill in all checkout details.');
+            toggleButton(false);
+            return;
+        }
+        if (!pincodeOk) {
+            setFormMessage(messageEl, 'Please enter a valid 6-digit pincode.');
             toggleButton(false);
             return;
         }
@@ -1150,14 +1366,23 @@ function initCheckout() {
 
         if (method === 'cod') {
             try {
-                await placeOrder(cart, customer, { provider: 'cod', status: 'pending' });
+                const orderResponse = await placeOrder(cart, customer, { provider: 'cod', status: 'pending' });
+                const totals = orderResponse?.totals || calculateCartTotals(cart);
+                const confirmation = buildOrderConfirmationPayload({
+                    orderId: orderResponse?.orderId,
+                    paymentStatus: orderResponse?.paymentStatus,
+                    totals,
+                    customer,
+                    cart
+                });
+                storeOrderConfirmation(confirmation);
                 saveCart([]);
                 renderCartPage();
                 saveAddressToProfile(email, address);
                 saveLocalOrder(email, cart, 'pending');
                 form.reset();
-                setFormMessage(messageEl, 'Order placed! Pay on delivery.', 'success');
                 toggleButton(false);
+                window.location.href = `order-confirmation.html?orderId=${encodeURIComponent(confirmation.orderId || '')}`;
             } catch (err) {
                 console.error('cod checkout error', err);
                 setFormMessage(messageEl, err.message || 'Unable to place order right now.');
@@ -1236,13 +1461,22 @@ function initCheckout() {
                             toggleButton(false);
                             return;
                         }
+                        const totals = data?.totals || paymentData?.totals || calculateCartTotals(cart);
+                        const confirmation = buildOrderConfirmationPayload({
+                            orderId: data?.orderId,
+                            paymentStatus: data?.paymentStatus,
+                            totals,
+                            customer,
+                            cart
+                        });
+                        storeOrderConfirmation(confirmation);
                         saveCart([]);
                         renderCartPage();
                         saveAddressToProfile(email, address);
                         saveLocalOrder(email, cart, 'placed');
                         form.reset();
-                        setFormMessage(messageEl, 'Payment successful! Your order is placed.', 'success');
                         toggleButton(false);
+                        window.location.href = `order-confirmation.html?orderId=${encodeURIComponent(confirmation.orderId || '')}`;
                     } catch (err) {
                         console.error('checkout error', err);
                         setFormMessage(messageEl, 'Payment captured, but we could not place the order automatically. Please contact support with your payment id.');
@@ -1298,6 +1532,13 @@ function renderCartPage() {
     const container = document.getElementById('cart-items');
     const countEl = document.getElementById('cart-count');
     const totalEl = document.getElementById('cart-total');
+    const subtotalEl = document.getElementById('cart-subtotal');
+    const shippingEl = document.getElementById('cart-shipping');
+    const taxEl = document.getElementById('cart-tax');
+    const checkoutSubtotalEl = document.getElementById('checkout-subtotal');
+    const checkoutShippingEl = document.getElementById('checkout-shipping');
+    const checkoutTaxEl = document.getElementById('checkout-tax');
+    const checkoutTotalEl = document.getElementById('checkout-total');
     if (!container) return;
 
     const rawCart = enrichCartItems(loadCart());
@@ -1309,7 +1550,14 @@ function renderCartPage() {
     if (!cart.length) {
         container.innerHTML = '<div class="cart-empty">Your cart is empty. <a href="products.html">Shop the collection</a>.</div>';
         if (countEl) countEl.textContent = '0';
+        if (subtotalEl) subtotalEl.textContent = formatPrice(0);
+        if (shippingEl) shippingEl.textContent = formatPrice(0);
+        if (taxEl) taxEl.textContent = formatPrice(0);
         if (totalEl) totalEl.textContent = formatPrice(0);
+        if (checkoutSubtotalEl) checkoutSubtotalEl.textContent = formatPrice(0);
+        if (checkoutShippingEl) checkoutShippingEl.textContent = formatPrice(0);
+        if (checkoutTaxEl) checkoutTaxEl.textContent = formatPrice(0);
+        if (checkoutTotalEl) checkoutTotalEl.textContent = formatPrice(0);
         return;
     }
 
@@ -1341,7 +1589,14 @@ function renderCartPage() {
 
     const totals = calculateCartTotals(cart);
     if (countEl) countEl.textContent = totals.count;
+    if (subtotalEl) subtotalEl.textContent = formatPrice(totals.subtotal);
+    if (shippingEl) shippingEl.textContent = formatPrice(totals.shipping);
+    if (taxEl) taxEl.textContent = formatPrice(totals.tax);
     if (totalEl) totalEl.textContent = formatPrice(totals.total);
+    if (checkoutSubtotalEl) checkoutSubtotalEl.textContent = formatPrice(totals.subtotal);
+    if (checkoutShippingEl) checkoutShippingEl.textContent = formatPrice(totals.shipping);
+    if (checkoutTaxEl) checkoutTaxEl.textContent = formatPrice(totals.tax);
+    if (checkoutTotalEl) checkoutTotalEl.textContent = formatPrice(totals.total);
 
     if (!container.dataset.bound) {
         container.addEventListener('click', (event) => {
@@ -1355,6 +1610,65 @@ function renderCartPage() {
             if (action === 'remove') removeCartItem(key);
         });
         container.dataset.bound = '1';
+    }
+}
+
+function initOrderConfirmationPage() {
+    if (!window.location.pathname.includes('order-confirmation.html')) return;
+    const content = document.getElementById('order-confirmation-content');
+    const emptyState = document.getElementById('order-confirmation-empty');
+    const params = new URLSearchParams(window.location.search);
+    const orderIdParam = params.get('orderId') || '';
+    let data = null;
+    try {
+        const raw = sessionStorage.getItem(ORDER_CONFIRMATION_KEY);
+        if (raw) data = JSON.parse(raw);
+    } catch (err) {
+        data = null;
+    }
+    if (!data || (orderIdParam && data.orderId && data.orderId !== orderIdParam)) {
+        if (content) content.classList.add('is-hidden');
+        if (emptyState) emptyState.classList.remove('is-hidden');
+        return;
+    }
+    if (emptyState) emptyState.classList.add('is-hidden');
+    if (content) content.classList.remove('is-hidden');
+
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value || '-';
+    };
+    const statusLabel = data.paymentStatus === 'paid' ? 'Paid' : (data.paymentStatus || 'Pending');
+    setText('confirm-order-id', data.orderId || orderIdParam || '-');
+    setText('confirm-status', statusLabel);
+    const placedAt = data.placedAt ? new Date(data.placedAt) : new Date();
+    setText('confirm-date', Number.isNaN(placedAt.getTime()) ? '-' : placedAt.toLocaleString('en-IN'));
+    setText('confirm-name', data.customer?.name || '-');
+    setText('confirm-email', data.customer?.email || '-');
+    setText('confirm-phone', data.customer?.phone || '-');
+    setText('confirm-address', data.customer?.address || '-');
+    setText('confirm-subtotal', formatPrice(data.totals?.subtotal || 0));
+    setText('confirm-shipping', formatPrice(data.totals?.shipping || 0));
+    setText('confirm-tax', formatPrice(data.totals?.tax || 0));
+    setText('confirm-total', formatPrice(data.totals?.total || 0));
+
+    const itemsRoot = document.getElementById('confirm-items');
+    if (itemsRoot) {
+        const items = Array.isArray(data.items) ? data.items : [];
+        if (!items.length) {
+            itemsRoot.innerHTML = '<p class="muted">No items found in this order.</p>';
+        } else {
+            itemsRoot.innerHTML = items.map(item => `
+                <div class="order-confirmation-item">
+                    ${item.image ? `<img src="${item.image}" alt="${item.name || 'Item'}">` : ''}
+                    <div class="order-confirmation-item-details">
+                        <strong>${item.name || 'Item'}</strong>
+                        <span>Qty: ${Number(item.qty) || 1}</span>
+                        <span>Unit: ${formatPrice(item.unitPrice || 0)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
     }
 }
 
@@ -1754,6 +2068,24 @@ async function loadProductDetails() {
     }
 
     if (!product) {
+        try {
+            const cachedRaw = sessionStorage.getItem(`product_details_cache:${productId}`);
+            if (cachedRaw) {
+                product = JSON.parse(cachedRaw);
+            }
+        } catch (err) {
+            // ignore cache errors
+        }
+    }
+
+    if (!product) {
+        const cached = readCachedProducts();
+        if (Array.isArray(cached) && cached.length) {
+            product = cached.find(item => String(item._id || item.id) === String(productId));
+        }
+    }
+
+    if (!product) {
         product = productsData.find(item => String(item.id) === String(productId));
     }
 
@@ -1779,9 +2111,9 @@ function initProductDetailsPage() {
     const backBtn = document.getElementById('back-btn');
     const helpEl = document.getElementById('action-help');
     const setHelp = (text) => { if (helpEl) helpEl.textContent = text; };
-    const showActionMessage = (text) => {
+    const showActionMessage = (text, type = 'info') => {
         setHelp(text);
-        alert(text);
+        showInlineMessage(text, type);
     };
     const isActionDisabled = (btn) => btn && btn.classList.contains('is-disabled');
 
@@ -1871,7 +2203,7 @@ function initProductDetailsPage() {
 
     const pushCurrentSelectionToCart = () => {
         if (!currentProduct) {
-            showActionMessage('Please wait, product details are still loading.');
+            showActionMessage('Please wait, product details are still loading.', 'info');
             return null;
         }
         const stockInfo = getStockStatus(currentProduct);
@@ -1880,7 +2212,7 @@ function initProductDetailsPage() {
             return null;
         }
         if (stockInfo.isOut) {
-            showActionMessage('Sorry, this item is out of stock right now.');
+            showActionMessage('Sorry, this item is out of stock right now.', 'error');
             return null;
         }
         const addonsTotal = getCustomizationAddons();
@@ -1906,24 +2238,20 @@ function initProductDetailsPage() {
     if (addToBagBtn) {
         addToBagBtn.addEventListener('click', function() {
             if (isActionDisabled(addToBagBtn)) {
-                showActionMessage('Sorry, this item is out of stock right now.');
+                showActionMessage('Sorry, this item is out of stock right now.', 'error');
                 return;
             }
             const result = pushCurrentSelectionToCart();
             if (!result) return;
-            const selectionText = result.selections.length ? result.selections.join(', ') : 'No customizations';
-            const noteLine = result.notes ? `
-Notes: ${result.notes}` : '';
             setHelp('Added to cart. You can keep shopping or proceed to cart.');
-            alert(`${currentProduct.name} added to your cart.
-Customizations: ${selectionText}${noteLine}`);
+            showInlineMessage(`${currentProduct.name} added to your cart.`, 'success');
         });
     }
 
     if (buyNowBtn) {
         buyNowBtn.addEventListener('click', function() {
             if (isActionDisabled(buyNowBtn)) {
-                showActionMessage('Sorry, this item is out of stock right now.');
+                showActionMessage('Sorry, this item is out of stock right now.', 'error');
                 return;
             }
             const result = pushCurrentSelectionToCart();
@@ -1969,6 +2297,70 @@ function setFormMessage(messageEl, text, type = 'error', isHtml = false) {
         messageEl.classList.add(type === 'success' ? 'is-success' : 'is-error');
     }
 }
+
+function initFooterNewsletter() {
+    const forms = document.querySelectorAll('.footer-form');
+    if (!forms.length) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    forms.forEach((form) => {
+        const input = form.querySelector('input[type="email"]');
+        const note = form.parentElement?.querySelector('[data-footer-note]') || form.parentElement?.querySelector('small');
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const value = String(input?.value || '').trim();
+            if (!value || !emailRegex.test(value)) {
+                showToast('Please enter a valid email address.', 'error', { icon: '!' });
+                if (note) note.textContent = 'Please enter a valid email address.';
+                if (input) {
+                    input.focus();
+                }
+                return;
+            }
+            showToast('Thanks for subscribing! We will be in touch soon.', 'success', { icon: '✓', confetti: true });
+            if (note) note.textContent = 'Thanks for subscribing! We will be in touch soon.';
+            if (input) {
+                input.value = '';
+            }
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initFooterNewsletter);
+
+function initFooterAdminReveal() {
+    const footer = document.querySelector('.site-footer');
+    if (!footer) return;
+    let trigger = footer.querySelector('.footer-admin-trigger');
+    if (!trigger) {
+        trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = 'footer-admin-trigger';
+        trigger.setAttribute('aria-label', 'Show admin login');
+        trigger.setAttribute('title', 'Admin');
+        footer.appendChild(trigger);
+    }
+    const isInteractive = (target) => !!target.closest('a, button, input, textarea, select, label, form');
+    const showHint = (event) => {
+        if (isInteractive(event.target)) return;
+        footer.classList.add('is-admin-hint');
+    };
+    footer.addEventListener('click', showHint);
+    footer.addEventListener('pointerdown', showHint);
+    trigger.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        footer.classList.toggle('is-admin-reveal');
+        footer.classList.add('is-admin-hint');
+    });
+    document.addEventListener('click', (event) => {
+        if (!footer.contains(event.target)) {
+            footer.classList.remove('is-admin-reveal');
+            footer.classList.remove('is-admin-hint');
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initFooterAdminReveal);
 
 function showToast(message, type = 'success', options = {}) {
     const toast = document.createElement('div');
@@ -2333,11 +2725,11 @@ function renderProducts(products) {
                             return;
                         }
                         if (stockInfo.isOut) {
-                            alert('Sorry, this item is out of stock right now.');
+                            showInlineMessage('Sorry, this item is out of stock right now.', 'error');
                             return;
                         }
                         addToCart(product);
-                        alert(`${product.name} added to your cart.`);
+                        showInlineMessage(`${product.name} added to your cart.`, 'success');
                     }
                 }
                 return;
@@ -2481,6 +2873,7 @@ function applyProductFilters() {
 
 function initCatalogFilters() {
     const searchInput = document.getElementById('product-search');
+    const searchBtn = document.querySelector('.search-box .search-btn');
     const categorySelect = document.getElementById('filter-category');
     const sortSelect = document.getElementById('sort-price');
     const categoryPills = document.querySelectorAll('.category-pill');
@@ -2490,6 +2883,14 @@ function initCatalogFilters() {
         searchInput.addEventListener('input', (event) => {
             currentFilters.search = event.target.value;
             applyProductFilters();
+        });
+    }
+
+    if (searchBtn && searchInput) {
+        searchBtn.addEventListener('click', () => {
+            currentFilters.search = searchInput.value || '';
+            applyProductFilters();
+            searchInput.focus();
         });
     }
 
@@ -2555,22 +2956,19 @@ async function loadProducts() {
         if (!res.ok) throw new Error(res.statusText);
         const products = await res.json();
         if (Array.isArray(products) && products.length) {
-            const merged = mergeCatalogs(products, productsData);
-            allProducts = merged.map((item, idx) => ({ ...item, __idx: featuredRank(item, idx) }));
+            allProducts = products.map((item, idx) => ({ ...item, __idx: featuredRank(item, idx) }));
             cacheProducts(allProducts);
         } else {
             const cached = readCachedProducts();
-            const mergedCache = mergeCatalogs(cached, productsData);
-            allProducts = mergedCache.length
-                ? mergedCache.map((item, idx) => ({ ...item, __idx: item.__idx ?? featuredRank(item, idx) }))
+            allProducts = cached.length
+                ? cached.map((item, idx) => ({ ...item, __idx: item.__idx ?? featuredRank(item, idx) }))
                 : fallback;
         }
     } catch (err) {
-        console.error('could not fetch products from backend, using static data', err);
+        console.error('could not fetch products from backend, using cached fallback', err);
         const cached = readCachedProducts();
-        const mergedCache = mergeCatalogs(cached, productsData);
-        allProducts = mergedCache.length
-            ? mergedCache.map((item, idx) => ({ ...item, __idx: item.__idx ?? featuredRank(item, idx) }))
+        allProducts = cached.length
+            ? cached.map((item, idx) => ({ ...item, __idx: item.__idx ?? featuredRank(item, idx) }))
             : fallback;
     }
 
@@ -2580,6 +2978,14 @@ async function loadProducts() {
 function viewDetails(productId) {
     if (!productId) return;
     storeBackTarget();
+    const product = getProductById(productId);
+    if (product) {
+        try {
+            sessionStorage.setItem(`product_details_cache:${productId}`, JSON.stringify(product));
+        } catch (err) {
+            // ignore storage errors
+        }
+    }
     window.location.href = `product-details.html?id=${encodeURIComponent(productId)}`;
 }
 // Event Listeners for Forms
@@ -2594,6 +3000,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderWishlistSection();
     loadCartFromBackend().then(renderCartPage);
     initCheckout();
+    initOrderConfirmationPage();
     renderSaleBanner();
 
     // For Contact Form 
@@ -2754,12 +3161,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const loginMessage = document.getElementById('login-message');
         loginForm.addEventListener('submit', async function(event) {
             event.preventDefault(); // Prevent default form submission
+            if (window.__userLoginInFlight) return;
             setFormMessage(loginMessage, '');
             const email = document.getElementById('login-email')?.value?.trim().toLowerCase() || '';
             const password = document.getElementById('login-password')?.value || '';
             if (!email || !password) {
                 setFormMessage(loginMessage, 'Please enter email and password.');
                 return;
+            }
+            const submitBtn = loginForm.querySelector('button[type="submit"]');
+            window.__userLoginInFlight = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.setAttribute('aria-busy', 'true');
             }
             try {
                 const res = await fetch(API_BASE_URL + '/login', {
@@ -2769,6 +3183,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) {
+                    if (res.status === 429) {
+                        setFormMessage(loginMessage, 'Too many login attempts. Please wait 2 minutes and try again.');
+                        return;
+                    }
+                    if (res.status === 403 && data?.needsVerification) {
+                        try {
+                            await fetch(API_BASE_URL + '/auth/resend-verification', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email })
+                            });
+                        } catch (err) {
+                            // ignore resend errors
+                        }
+                        setFormMessage(loginMessage, data.error || 'Email not verified. We sent a verification link.', 'error');
+                        return;
+                    }
                     setFormMessage(loginMessage, data.error || 'Login failed. Please try again.');
                     return;
                 }
@@ -2778,6 +3209,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.user) {
                     localStorage.setItem('authUser', JSON.stringify(data.user));
                 }
+                localStorage.setItem('authEmail', email);
                 setFormMessage(loginMessage, 'Login successful! Redirecting...', 'success');
                 showToast('Welcome back!', 'success', { confetti: true, icon: '✓' });
                 loginForm.reset();
@@ -2785,6 +3217,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err) {
                 console.error('login error', err);
                 setFormMessage(loginMessage, 'Unable to reach server. Please try again.');
+            } finally {
+                window.__userLoginInFlight = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.removeAttribute('aria-busy');
+                }
             }
         });
     }
@@ -2854,6 +3292,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     setFormMessage(signupMessage, data.error || 'Signup failed. Please try again.');
                     return;
                 }
+                if (data.needsVerification) {
+                    setFormMessage(signupMessage, data.message || 'Verification email sent. Please check your inbox.', 'success');
+                    showToast('Verification email sent', 'success', { icon: '✉' });
+                    signupForm.reset();
+                    return;
+                }
                 setFormMessage(signupMessage, 'Account created! Redirecting to login...', 'success');
                 showToast('Account created!', 'success', { confetti: true, icon: '✓' });
                 signupForm.reset();
@@ -2909,6 +3353,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 setFormMessage(forgotMessage, 'Unable to reach server. Please try again.');
             }
         });
+    }
+
+    const verifyMessage = document.getElementById('verify-message');
+    if (verifyMessage && window.location.pathname.includes('verify-email.html')) {
+        const params = new URLSearchParams(window.location.search || '');
+        const token = params.get('token') || '';
+        if (!token) {
+            setFormMessage(verifyMessage, 'Verification link is missing or invalid.', 'error');
+        } else {
+            (async () => {
+                try {
+                    const res = await fetch(API_BASE_URL + '/auth/verify-email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token })
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        setFormMessage(verifyMessage, data.error || 'Unable to verify email.', 'error');
+                        return;
+                    }
+                    setFormMessage(verifyMessage, data.message || 'Email verified successfully. You can now log in.', 'success');
+                    setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+                } catch (err) {
+                    console.error('verify email error', err);
+                    setFormMessage(verifyMessage, 'Unable to verify email. Please try again.', 'error');
+                }
+            })();
+        }
     }
 
     const resetForm = document.getElementById('reset-form');

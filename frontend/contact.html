@@ -1,4 +1,4 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -20,12 +20,9 @@
                 <ul>
                     <li><a href="index.html">Home</a></li>
                     <li><a href="products.html">Products</a></li>
-                    <li><a href="about.html">About</a></li>
-                    <li><a href="login.html">Login</a></li>
+<li><a href="login.html">Login</a></li>
                     <li><a href="contact.html" class="active">Contact</a></li>
-
-                    <li><a href="admin-login.html">Admin</a></li>
-                </ul>
+</ul>
             </nav>
             <div class="header-cart">
                 <a href="profile.html" class="nav-profile-link" aria-label="User Profile">
@@ -39,42 +36,93 @@
         </div>
     </header>
 
-    <main class="contact-page">
+        <main class="contact-page">
         <section class="contact-hero">
             <div class="contact-hero-text">
-                <span class="contact-eyebrow">Contact Us</span>
-                <h2>Get In Touch</h2>
-                <p>Share your requirement, customization ideas, or preorder questions. Our team replies within 24 to 48 hours.</p>
-                <div class="contact-hero-cards">
-                    <div class="contact-hero-card">
-                        <span>Email</span>
-                        <a href="mailto:paithanisareewebsite@gmail.com">paithanisareewebsite@gmail.com</a>
-                    </div>
-                    <div class="contact-hero-card">
-                        <span>Phone</span>
-                        <p>+91 9860655387</p>
-                    </div>
-                    <div class="contact-hero-card">
-                        <span>Location</span>
-                        <p>Yeola, Nashik, Maharashtra</p>
-                    </div>
+                <span class="contact-eyebrow">Help Center</span>
+                <h2>How can we help you today?</h2>
+                <p>Premium support, tailored for Rudra Paithani. Search quickly or choose a help topic below.</p>
+                <div class="contact-search">
+                    <input type="search" placeholder="Search orders, returns, care, customization..." aria-label="Search help topics">
+                    <button type="button">Search</button>
+                </div>
+                <div class="contact-quick-actions">
+                    <a class="quick-chip" href="#contact-form">Contact Support</a>
+                    <a class="quick-chip" href="return-refund.html">Returns</a>
+                    <a class="quick-chip" href="care-guide.html">Care Guide</a>
+                    <a class="quick-chip" href="products.html">Browse Sarees</a>
                 </div>
             </div>
-            <div class="contact-hero-note">
-                <h4>What you can ask</h4>
-                <ul>
-                    <li>Customization & blouse stitching</li>
-                    <li>Availability & preorder timelines</li>
-                    <li>Shipping, gift wrap, and care tips</li>
-                </ul>
+            <div class="contact-hero-aside">
+                <div class="contact-hero-panel">
+                    <h4>Quick Contact</h4>
+                    <div class="contact-channel-list">
+                        <a class="contact-channel" href="tel:+917888118137">
+                            <span class="channel-label">Call</span>
+                            <span class="channel-value">+91 7888118137</span>
+                        </a>
+                        <a class="contact-channel" href="mailto:paithanisareewebsite@gmail.com">
+                            <span class="channel-label">Email</span>
+                            <span class="channel-value">paithanisareewebsite@gmail.com</span>
+                        </a>
+                        <a class="contact-channel" href="https://wa.me/917888118137" target="_blank" rel="noopener noreferrer">
+                            <span class="channel-label">WhatsApp</span>
+                            <span class="channel-value">Chat with us</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="contact-hero-panel muted-panel">
+                    <h4>Support Hours</h4>
+                    <p>Mon - Sat: 10:00 AM to 7:00 PM</p>
+                    <p>We typically reply within 24 - 48 hours.</p>
+                </div>
             </div>
         </section>
 
-        <section class="contact-layout">
-            <div class="contact-card contact-form-card">
+        <section class="support-grid">
+            <div class="support-card">
+                <div class="support-icon">&#128230;</div>
+                <h3>Order & Delivery</h3>
+                <p>Tracking, expected delivery, and shipping updates.</p>
+                <a href="#contact-form">Get order help</a>
+            </div>
+            <div class="support-card">
+                <div class="support-icon">&#128176;</div>
+                <h3>Payments & COD</h3>
+                <p>UPI, card, or pay-on-delivery questions answered.</p>
+                <a href="return-refund.html">Payment policy</a>
+            </div>
+            <div class="support-card">
+                <div class="support-icon">&#128088;</div>
+                <h3>Customization</h3>
+                <p>Blouse stitching, sizing, and design changes.</p>
+                <a href="#contact-form">Request customization</a>
+            </div>
+            <div class="support-card">
+                <div class="support-icon">&#128717;</div>
+                <h3>Return & Refund</h3>
+                <p>Easy returns and refund timelines.</p>
+                <a href="return-refund.html">Start a return</a>
+            </div>
+            <div class="support-card">
+                <div class="support-icon">&#127912;</div>
+                <h3>Care & Storage</h3>
+                <p>Keep your Paithani shining for years.</p>
+                <a href="care-guide.html">Care guide</a>
+            </div>
+            <div class="support-card">
+                <div class="support-icon">&#127872;</div>
+                <h3>Bridal & Bulk</h3>
+                <p>Wedding trousseau, gifting, and bulk orders.</p>
+                <a href="#contact-form">Talk to our team</a>
+            </div>
+        </section>
+
+        <section class="contact-layout" id="contact-form">
+            <div class="contact-card form-container contact-form-card">
                 <div class="contact-card-header">
-                    <h3>Send a Message</h3>
-                    <p>Fill in the details and we will respond quickly.</p>
+                    <h3>Contact Support</h3>
+                    <p>Share your requirement and we will respond quickly.</p>
                 </div>
                 <form id="contactForm" class="contact-form">
                     <div class="contact-grid">
@@ -128,43 +176,142 @@
                 </form>
             </div>
 
-            <div class="contact-card contact-preview-card">
-                <div id="contactPreview" class="contact-preview" aria-live="polite">
-                    <h3>Your Details</h3>
-                    <p><strong>Name:</strong> <span data-preview-name>Not provided</span></p>
-                    <p><strong>Email:</strong> <span data-preview-email>Not provided</span></p>
-                    <p><strong>Gender:</strong> <span data-preview-gender>Not provided</span></p>
-                    <p><strong>State:</strong> <span data-preview-state>Not provided</span></p>
-                    <p><strong>Interested Products:</strong> <span data-preview-products>Not provided</span></p>
-                    <p><strong>Message:</strong> <span data-preview-message>Not provided</span></p>
-                    <p><strong>Status:</strong> <span data-preview-status>Not submitted</span></p>
+            <div class="contact-side">
+                <div class="contact-card contact-preview-card">
+                    <div id="contactPreview" class="contact-preview" aria-live="polite">
+                        <h3>Your Details</h3>
+                        <p><strong>Name:</strong> <span data-preview-name>Not provided</span></p>
+                        <p><strong>Email:</strong> <span data-preview-email>Not provided</span></p>
+                        <p><strong>Gender:</strong> <span data-preview-gender>Not provided</span></p>
+                        <p><strong>State:</strong> <span data-preview-state>Not provided</span></p>
+                        <p><strong>Interested Products:</strong> <span data-preview-products>Not provided</span></p>
+                        <p><strong>Message:</strong> <span data-preview-message>Not provided</span></p>
+                        <p><strong>Status:</strong> <span data-preview-status>Not submitted</span></p>
+                    </div>
                 </div>
-                <div id="contactReplies" class="contact-preview" aria-live="polite">
-                    <h3>Replies From Our Team</h3>
-                    <p id="contactRepliesMeta" class="muted">Enter your email and tap "Check Replies".</p>
-                    <div id="contactRepliesList"></div>
+                <div class="contact-card contact-preview-card">
+                    <div id="contactReplies" class="contact-preview" aria-live="polite">
+                        <h3>Replies From Our Team</h3>
+                        <p id="contactRepliesMeta" class="muted">Enter your email and tap "Check Replies".</p>
+                        <div id="contactRepliesList"></div>
+                    </div>
+                </div>
+                <div class="contact-card contact-mini-card">
+                    <h4>Need faster help?</h4>
+                    <p>Message us on WhatsApp for urgent queries.</p>
+                    <a class="btn-secondary" href="https://wa.me/917888118137" target="_blank" rel="noopener noreferrer">Chat on WhatsApp</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="contact-faq">
+            <div class="contact-card">
+                <div class="contact-card-header">
+                    <h3>Frequently Asked Questions</h3>
+                    <p>Quick answers before you reach out.</p>
+                </div>
+                <div class="faq-grid">
+                    <details class="faq-item">
+                        <summary>How long does delivery take?</summary>
+                        <p>Standard delivery is 4-7 business days. We will share tracking once the order ships.</p>
+                    </details>
+                    <details class="faq-item">
+                        <summary>Can I request a custom blouse?</summary>
+                        <p>Yes. Share your measurements and design preference in the contact form.</p>
+                    </details>
+                    <details class="faq-item">
+                        <summary>Do you offer cash on delivery?</summary>
+                        <p>COD is available on select orders. Our team will confirm eligibility on request.</p>
+                    </details>
+                    <details class="faq-item">
+                        <summary>How do returns work?</summary>
+                        <p>Visit Return & Refund for timelines and eligibility. We guide you through each step.</p>
+                    </details>
                 </div>
             </div>
         </section>
     </main>
 
-    <footer>
-        <div class="footer-content">
-            <div class="footer-info">
-                <p>Email: <a href="https://mail.google.com/mail/?view=cm&fs=1&to=paithanisareewebsite@gmail.com" target="_blank" rel="noopener noreferrer">paithanisareewebsite@gmail.com</a></p>
-                <p>Reach us: Yeola, Nashik, Maharashtra - 423401</p>
-                <p>Phone: +91 9860655387</p>
-                        </div>
-            <div class="footer-links">
-                <a href="terms.html">Terms of Service</a>
-                <a href="privacy.html">Privacy Policy</a>
-                <a href="care-guide.html">Paithani Care Guide</a>
-                <a href="return-refund.html">Return & Refund</a>
-            </div>
+    <footer class="site-footer">
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div class="footer-logo-wrap">
+        <img src="images/logo.png" alt="Rudra Paithani Yeola Logo" class="footer-logo">
+        <div class="footer-brand-text">
+          <h3>Rudra Paithani Yeola</h3>
+          <p>Handwoven Paithani sarees from Yeola, crafted with heritage silk and timeless artistry.</p>
         </div>
-    </footer>
+      </div>
+      <div class="footer-contact">
+        <div class="footer-contact-line">
+          <span class="footer-info-icon" aria-hidden="true">&#9993;</span>
+          <a href="mailto:paithanisareewebsite@gmail.com">paithanisareewebsite@gmail.com</a>
+        </div>
+        <div class="footer-contact-line">
+          <span class="footer-info-icon" aria-hidden="true">&#128205;</span>
+          <a href="https://www.google.com/maps?q=Yeola,+Nashik,+Maharashtra+423401" target="_blank" rel="noopener noreferrer">Yeola, Nashik, Maharashtra - 423401</a>
+        </div>
+        <div class="footer-contact-line">
+          <span class="footer-info-icon" aria-hidden="true">&#128222;</span>
+          <a href="tel:+917888118137">+91 7888118137</a>
+        </div>
+      </div>
+      <div class="footer-social">
+        <a href="https://wa.me/917888118137" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+      </div>
+    </div>
+    <div class="footer-newsletter">
+      <h4>Get updates from Rudra</h4>
+      <p>New arrivals, heritage stories, and exclusive offers.</p>
+      <form class="footer-form" action="#" method="post">
+        <input type="email" name="email" placeholder="Enter your email" aria-label="Email address" autocomplete="email" required>
+        <button type="submit">Subscribe</button>
+      </form>
+      <small data-footer-note aria-live="polite">We respect your privacy. Unsubscribe anytime.</small>
+    </div>
+  </div>
+  <div class="footer-grid">
+    <div class="footer-col">
+      <h5>Shop</h5>
+      <a href="index.html">Home</a>
+      <a href="products.html">All Sarees</a>
+      <a href="cart.html">Cart</a>
+      <a href="profile.html">Profile</a>
+    </div>
+    <div class="footer-col">
+      <h5>Account</h5>
+      <a href="login.html">Login</a>
+      <a href="signup.html">Sign Up</a>
+      <a href="forgot-password.html">Forgot Password</a>
+      <a href="verify-email.html">Verify Email</a>
+    </div>
+    <div class="footer-col">
+      <h5>Support</h5>
+      <a href="contact.html">Contact Us</a>
+      <a href="care-guide.html">Paithani Care Guide</a>
+      <a href="return-refund.html">Return & Refund</a>
+      <a href="about.html">About Rudra</a>
+    </div>
+    <div class="footer-col">
+      <h5>Policies</h5>
+      <a href="terms.html">Terms of Service</a>
+      <a href="privacy.html">Privacy Policy</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 Rudra Paithani Yeola. All rights reserved.</p>
+    <div class="payment-badges">
+      <span class="payment-badge">Visa</span>
+      <span class="payment-badge">Mastercard</span>
+      <span class="payment-badge">UPI</span>
+      <span class="payment-badge">COD</span>
+    </div>
+    <a class="footer-admin-link" href="admin-login.html">Admin Login</a>
+  </div>
+</footer>
 
-    <script src="js/script.js?v=20260327"></script>
+      <script src="js/api-config.js?v=20260404"></script>
+<script src="js/script.js?v=20260405g"></script>
     <script>
         const contactForm = document.getElementById('contactForm');
         const contactName = document.getElementById('contactName');
@@ -207,6 +354,22 @@
     <script src="js/whatsapp-chat.js"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
