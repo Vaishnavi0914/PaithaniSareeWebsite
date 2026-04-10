@@ -23,6 +23,7 @@ const User = require('./models/User');
 const Order = require('./models/Order');
 const Contact = require('./models/Contact');
 const Cart = require('./models/Cart');
+const Subscriber = require('./models/Subscriber');
 
 const app = express();
 app.disable('x-powered-by');
@@ -191,6 +192,55 @@ function resolveAppBaseUrl(req) {
   return 'http://localhost:5000';
 }
 
+const ORDER_STATUS_FLOW = ['placed', 'paid', 'packed', 'shipped', 'delivered', 'returned', 'refunded', 'cancelled'];
+const ORDER_STATUS_SET = new Set(ORDER_STATUS_FLOW);
+
+function normalizeOrderStatus(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  return ORDER_STATUS_SET.has(raw) ? raw : '';
+}
+
+function pushOrderStatusHistory(order, status, note = '', by = '') {
+  if (!order) return;
+  if (!Array.isArray(order.statusHistory)) {
+    order.statusHistory = [];
+  }
+  order.statusHistory.push({
+    status,
+    note: note || '',
+    at: new Date(),
+    by: by || ''
+  });
+}
+
+function applyOrderStatusTimestamps(order, status) {
+  if (!order) return;
+  const now = new Date();
+  switch (status) {
+    case 'packed':
+      if (!order.packedAt) order.packedAt = now;
+      break;
+    case 'shipped':
+      if (!order.shippedAt) order.shippedAt = now;
+      break;
+    case 'delivered':
+      if (!order.deliveredAt) order.deliveredAt = now;
+      break;
+    case 'returned':
+      if (!order.returnedAt) order.returnedAt = now;
+      break;
+    case 'refunded':
+      if (!order.refundedAt) order.refundedAt = now;
+      if (order.payment) order.payment.status = 'refunded';
+      break;
+    case 'cancelled':
+      if (!order.cancelledAt) order.cancelledAt = now;
+      break;
+    default:
+      break;
+  }
+}
+
 function loadDefaultProducts() {
   const seedPath = path.join(__dirname, '../frontend/js/script.js');
   if (!fs.existsSync(seedPath)) return [];
@@ -314,9 +364,10 @@ mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 })
     process.exit(1);
   });
 
-const SHIPPING_FREE_THRESHOLD = Number(process.env.SHIPPING_FREE_THRESHOLD || 50000);
-const SHIPPING_FLAT = Number(process.env.SHIPPING_FLAT || 250);
-const TAX_RATE = Number(process.env.TAX_RATE || 0.05);
+const SHIPPING_RATE_NASHIK = Number(process.env.SHIPPING_RATE_NASHIK || 200);
+const SHIPPING_RATE_MAHARASHTRA = Number(process.env.SHIPPING_RATE_MAHARASHTRA || 300);
+const SHIPPING_RATE_REST = Number(process.env.SHIPPING_RATE_REST || 500);
+const TAX_RATE = Number(process.env.TAX_RATE || 0);
 
 function roundRupees(value) {
   return Math.round(Number(value) || 0);
@@ -330,9 +381,24 @@ function calculateSubtotal(items = []) {
   }, 0);
 }
 
-function calculateOrderTotals(items = []) {
+function normalizeLocationValue(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function resolveShippingCharge(customer = {}) {
+  const city = normalizeLocationValue(customer.city || '');
+  const state = normalizeLocationValue(customer.state || '');
+  const address = normalizeLocationValue(customer.address || '');
+  const combined = `${city} ${state} ${address}`.trim();
+  if (!combined) return 0;
+  if (combined.includes('nashik')) return SHIPPING_RATE_NASHIK;
+  if (state.includes('maharashtra') || combined.includes('maharashtra')) return SHIPPING_RATE_MAHARASHTRA;
+  return SHIPPING_RATE_REST;
+}
+
+function calculateOrderTotals(items = [], customer = {}) {
   const subtotal = calculateSubtotal(items);
-  const shipping = subtotal >= SHIPPING_FREE_THRESHOLD ? 0 : (subtotal > 0 ? SHIPPING_FLAT : 0);
+  const shipping = resolveShippingCharge(customer);
   const tax = roundRupees(subtotal * TAX_RATE);
   const total = roundRupees(subtotal + shipping + tax);
   return { subtotal, shipping, tax, total };
@@ -503,6 +569,61 @@ async function sendEmail({ to, subject, text, html }) {
     console.error('email send error', err);
     return { ok: false, error: err };
   }
+}
+
+function getRequestIp(req) {
+  const forwarded = String(req?.headers?.['x-forwarded-for'] || '');
+  const ip = forwarded.split(',')[0].trim() || String(req?.ip || '').trim();
+  return ip || 'unknown';
+}
+
+function formatLoginTimestamp() {
+  return new Date().toISOString();
+}
+
+async function sendLoginNotifications(user, req) {
+  if (!hasSmtp || !mailer || !user) return;
+  const userEmail = String(user.email || '').trim().toLowerCase();
+  if (!userEmail) return;
+  const ip = getRequestIp(req);
+  const agent = String(req?.headers?.['user-agent'] || '').trim();
+  const timestamp = formatLoginTimestamp();
+  const subject = 'New login to your Rudra Paithani account';
+  const text = `Hi ${user.name || 'there'},\n\n` +
+    `We noticed a login to your Rudra Paithani account.\n\n` +
+    `Time: ${timestamp}\n` +
+    `IP: ${ip}\n` +
+    (agent ? `Device: ${agent}\n\n` : '\n') +
+    `If this was you, no action is needed. If not, please reset your password immediately.`;
+  const html = `
+    <p>Hi ${user.name || 'there'},</p>
+    <p>We noticed a login to your Rudra Paithani account.</p>
+    <ul>
+      <li><strong>Time:</strong> ${timestamp}</li>
+      <li><strong>IP:</strong> ${ip}</li>
+      ${agent ? `<li><strong>Device:</strong> ${agent}</li>` : ''}
+    </ul>
+    <p>If this was you, no action is needed. If not, please reset your password immediately.</p>
+  `;
+  const adminSubject = 'User login notification';
+  const adminText = `User login detected.\n\nEmail: ${userEmail}\nTime: ${timestamp}\nIP: ${ip}\n` +
+    (agent ? `Device: ${agent}\n` : '');
+  const adminHtml = `
+    <p>User login detected.</p>
+    <ul>
+      <li><strong>Email:</strong> ${userEmail}</li>
+      <li><strong>Time:</strong> ${timestamp}</li>
+      <li><strong>IP:</strong> ${ip}</li>
+      ${agent ? `<li><strong>Device:</strong> ${agent}</li>` : ''}
+    </ul>
+  `;
+  const sends = [
+    sendEmail({ to: userEmail, subject, text, html })
+  ];
+  if (ADMIN_EMAIL) {
+    sends.push(sendEmail({ to: ADMIN_EMAIL, subject: adminSubject, text: adminText, html: adminHtml }));
+  }
+  await Promise.allSettled(sends);
 }
 
 function computeStockStatus(product) {
@@ -822,6 +943,9 @@ app.post('/login', async (req, res) => {
     const token = jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
     rateLimitStore.delete((req.ip || 'unknown') + ':auth');
+    sendLoginNotifications(user, req).catch((err) => {
+      console.error('login notification error', err);
+    });
     res.json({
       message: 'Login successful',
       token,
@@ -856,7 +980,7 @@ app.patch('/me', requireUserAuth, async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.user.userId,
       update,
-      { new: true }
+      { returnDocument: 'after' }
     ).select('name email phone addresses defaultAddressId');
     if (!user) return res.status(404).json({ error: 'User not found' });
     return res.status(200).json({ user });
@@ -1001,6 +1125,72 @@ app.get('/orders', requireUserAuth, async (req, res) => {
   }
 });
 
+// Track order by orderId + email (public)
+app.post('/orders/track', async (req, res) => {
+  try {
+    const orderId = String(req.body?.orderId || '').trim();
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const phone = String(req.body?.phone || '').trim();
+    if (!orderId || !email) {
+      return res.status(400).json({ error: 'orderId and email are required' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ error: 'Invalid orderId' });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    const orderEmail = String(order?.customer?.email || '').trim().toLowerCase();
+    if (!orderEmail || orderEmail !== email) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    if (phone) {
+      const normalizePhone = (value) => String(value || '').replace(/\D/g, '');
+      const inputPhone = normalizePhone(phone);
+      const orderPhone = normalizePhone(order?.customer?.phone || '');
+      if (inputPhone && orderPhone && inputPhone !== orderPhone) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+    }
+
+    return res.status(200).json({
+      _id: order._id,
+      status: order.status,
+      statusHistory: order.statusHistory || [],
+      tracking: order.tracking || {},
+      packedAt: order.packedAt,
+      shippedAt: order.shippedAt,
+      deliveredAt: order.deliveredAt,
+      returnedAt: order.returnedAt,
+      refundedAt: order.refundedAt,
+      cancelledAt: order.cancelledAt,
+      payment: {
+        status: order.payment?.status || '',
+        provider: order.payment?.provider || ''
+      },
+      totals: {
+        subtotal: order.subtotalAmount || 0,
+        shipping: order.shippingAmount || 0,
+        tax: order.taxAmount || 0,
+        total: order.totalAmount || 0
+      },
+      items: Array.isArray(order.items) ? order.items : [],
+      customer: {
+        name: order.customer?.name || '',
+        email: orderEmail,
+        phone: order.customer?.phone || '',
+        address: order.customer?.address || ''
+      },
+      createdAt: order.createdAt
+    });
+  } catch (err) {
+    console.error('track order error', err);
+    return res.status(500).json({ error: 'Unable to track order right now.' });
+  }
+});
+
 // Cancel order within 2 days
 app.post('/orders/:id/cancel', requireUserAuth, async (req, res) => {
   try {
@@ -1017,7 +1207,7 @@ app.post('/orders/:id/cancel', requireUserAuth, async (req, res) => {
     }
 
     const status = String(order.status || '').toLowerCase();
-    if (['cancelled', 'shipped', 'delivered'].includes(status)) {
+    if (['cancelled', 'packed', 'shipped', 'delivered', 'returned', 'refunded'].includes(status)) {
       return res.status(400).json({ error: `Order cannot be cancelled (status: ${status})` });
     }
 
@@ -1029,7 +1219,8 @@ app.post('/orders/:id/cancel', requireUserAuth, async (req, res) => {
     }
 
     order.status = 'cancelled';
-    order.cancelledAt = new Date();
+    applyOrderStatusTimestamps(order, 'cancelled');
+    pushOrderStatusHistory(order, 'cancelled', 'Cancelled by customer', 'customer');
     const updated = await order.save();
     return res.status(200).json(updated);
   } catch (err) {
@@ -1259,7 +1450,7 @@ app.put('/cart/:cartId', async (req, res) => {
     const updated = await Cart.findOneAndUpdate(
       { cartId: req.params.cartId },
       { cartId: req.params.cartId, items, updatedAt: new Date() },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
     return res.status(200).json(updated);
   } catch (err) {
@@ -1307,7 +1498,7 @@ app.post('/payments/create-order', async (req, res) => {
       return res.status(409).json({ error: 'Some items are out of stock', issues: inventoryCheck.issues });
     }
 
-    const totals = calculateOrderTotals(items);
+    const totals = calculateOrderTotals(items, customer);
     const amountPaise = Math.round(totals.total * 100);
     if (amountPaise < 100) return res.status(400).json({ error: 'Amount must be at least Rs 1' });
 
@@ -1350,7 +1541,7 @@ app.post('/checkout', async (req, res) => {
     const { cart, items } = await fetchCartItems(cartId, fallbackItems);
     if (!items.length) return res.status(400).json({ error: 'Cart is empty' });
 
-    const totals = calculateOrderTotals(items);
+    const totals = calculateOrderTotals(items, customer);
     const totalAmount = totals.total;
 
     let paymentInfo = {
@@ -1397,7 +1588,14 @@ app.post('/checkout', async (req, res) => {
     inventoryAdjusted = inventoryCheck.quantities;
 
     // Order status tracks fulfillment; payment status lives under payment.status.
-    const derivedStatus = 'placed';
+    let derivedStatus = 'placed';
+    const statusHistory = [
+      { status: 'placed', note: 'Order placed', at: new Date(), by: 'system' }
+    ];
+    if (paymentInfo.status === 'paid') {
+      derivedStatus = 'paid';
+      statusHistory.push({ status: 'paid', note: 'Payment captured', at: new Date(), by: 'system' });
+    }
 
     const customerEmail = String(customer?.email || authUser?.email || '').trim().toLowerCase();
     const order = new Order({
@@ -1415,6 +1613,7 @@ app.post('/checkout', async (req, res) => {
       taxAmount: totals.tax,
       totalAmount,
       status: derivedStatus,
+      statusHistory,
       payment: paymentInfo
     });
 
@@ -1429,13 +1628,12 @@ app.post('/checkout', async (req, res) => {
     if (customerEmail) {
       const subject = `Order confirmation - ${order._id}`;
       const itemsList = items.map(item => `- ${item.qty || 1} x ${item.name || 'Item'}`).join('\n');
-      const text = `Thank you for your order!\n\nOrder ID: ${order._id}\nSubtotal: Rs ${totals.subtotal}\nShipping: Rs ${totals.shipping}\nTax: Rs ${totals.tax}\nTotal: Rs ${totalAmount}\nStatus: ${derivedStatus}\n\nItems:\n${itemsList}\n\nWe will update you when your order ships.`;
+      const text = `Thank you for your order!\n\nOrder ID: ${order._id}\nSubtotal: Rs ${totals.subtotal}\nShipping: Rs ${totals.shipping}\nTotal: Rs ${totalAmount}\nStatus: ${derivedStatus}\n\nItems:\n${itemsList}\n\nWe will update you when your order ships.`;
       const html = `
         <p>Thank you for your order!</p>
         <p><strong>Order ID:</strong> ${order._id}</p>
         <p><strong>Subtotal:</strong> Rs ${totals.subtotal}</p>
         <p><strong>Shipping:</strong> Rs ${totals.shipping}</p>
-        <p><strong>Tax:</strong> Rs ${totals.tax}</p>
         <p><strong>Total:</strong> Rs ${totalAmount}</p>
         <p><strong>Status:</strong> ${derivedStatus}</p>
         <p><strong>Items:</strong></p>
@@ -1564,6 +1762,50 @@ app.post('/contacts', async (req, res) => {
   }
 });
 
+app.post('/subscribe', async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Please provide a valid email address.' });
+    }
+    const existing = await Subscriber.findOne({ email });
+    if (existing) {
+      return res.status(200).json({ message: 'You are already subscribed.', subscribed: false, already: true });
+    }
+    const subscriber = new Subscriber({ email });
+    await subscriber.save();
+
+    const userSubject = 'Welcome to Rudra Paithani updates';
+    const userText = 'Thanks for subscribing to Rudra Paithani Yeola updates. ' +
+      'We will share new arrivals, offers, and important updates with you.';
+    const userHtml = `
+      <p>Thanks for subscribing to Rudra Paithani Yeola updates.</p>
+      <p>We will share new arrivals, offers, and important updates with you.</p>
+    `;
+    const adminSubject = 'New newsletter subscriber';
+    const adminText = `New subscriber: ${email}`;
+    const adminHtml = `<p>New subscriber: <strong>${email}</strong></p>`;
+
+    const sends = [];
+    if (hasSmtp && mailer) {
+      sends.push(sendEmail({ to: email, subject: userSubject, text: userText, html: userHtml }));
+      if (ADMIN_EMAIL) {
+        sends.push(sendEmail({ to: ADMIN_EMAIL, subject: adminSubject, text: adminText, html: adminHtml }));
+      }
+      await Promise.allSettled(sends);
+    }
+
+    return res.status(201).json({ message: 'Thanks for subscribing!', subscribed: true });
+  } catch (err) {
+    if (err && err.code === 11000) {
+      return res.status(200).json({ message: 'You are already subscribed.', subscribed: false, already: true });
+    }
+    console.error('subscribe error', err);
+    return res.status(500).json({ error: 'Unable to subscribe right now.' });
+  }
+});
+
 app.get('/admin/users', async (req, res) => {
   try {
     const users = await User.find({}).select('-password -__v').sort({ createdAt: -1 }).limit(100);
@@ -1576,18 +1818,52 @@ app.get('/admin/users', async (req, res) => {
 
 app.patch('/admin/orders/:id', async (req, res) => {
   try {
-    const { status } = req.body;
-    const allowed = ['placed', 'processing', 'shipped', 'delivered', 'cancelled'];
-    if (!status || !allowed.includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
+    const incomingStatus = req.body?.status;
+    const nextStatus = normalizeOrderStatus(incomingStatus);
+    const trackingPayload = req.body?.tracking && typeof req.body.tracking === 'object'
+      ? req.body.tracking
+      : {};
+    const note = String(req.body?.note || '').trim();
+
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    let updated = false;
+
+    if (incomingStatus !== undefined) {
+      if (!nextStatus) {
+        return res.status(400).json({ error: 'Invalid status' });
+      }
+      if (order.status !== nextStatus) {
+        order.status = nextStatus;
+        if (nextStatus === 'paid' && order.payment) {
+          order.payment.status = 'paid';
+        }
+        pushOrderStatusHistory(order, nextStatus, note || `Status updated to ${nextStatus}`, 'admin');
+        applyOrderStatusTimestamps(order, nextStatus);
+        updated = true;
+      }
     }
-    const updated = await Order.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
-    if (!updated) return res.status(404).json({ error: 'Order not found' });
-    return res.status(200).json(updated);
+
+    const trackingUpdates = {
+      carrier: trackingPayload.carrier ?? req.body?.carrier,
+      trackingNumber: trackingPayload.trackingNumber ?? req.body?.trackingNumber,
+      trackingUrl: trackingPayload.trackingUrl ?? req.body?.trackingUrl
+    };
+    Object.entries(trackingUpdates).forEach(([key, value]) => {
+      if (value !== undefined) {
+        if (!order.tracking) order.tracking = {};
+        order.tracking[key] = String(value || '').trim();
+        updated = true;
+      }
+    });
+
+    if (!updated) {
+      return res.status(400).json({ error: 'No updates supplied' });
+    }
+
+    const saved = await order.save();
+    return res.status(200).json(saved);
   } catch (err) {
     console.error('update order status error', err);
     return res.status(500).json({ error: 'Failed to update order', details: err.message });
@@ -1601,7 +1877,7 @@ app.patch('/admin/users/:id', async (req, res) => {
     const updated = await User.findByIdAndUpdate(
       req.params.id,
       update,
-      { new: true }
+      { returnDocument: 'after' }
     ).select('-password -__v');
     if (!updated) return res.status(404).json({ error: 'User not found' });
     return res.status(200).json(updated);
@@ -1620,7 +1896,7 @@ app.patch('/admin/contacts/:id/reply', async (req, res) => {
     const updated = await Contact.findByIdAndUpdate(
       req.params.id,
       { reply, status: 'replied', repliedAt: new Date() },
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (!updated) return res.status(404).json({ error: 'Message not found' });
     let emailResult = { ok: false, skipped: true };
@@ -1742,7 +2018,11 @@ app.put('/admin/products/:id', async (req, res) => {
     if (discountValue !== undefined) updateData.discountValue = Number(discountValue) || 0;
     if (featured !== undefined) updateData.featured = Boolean(featured);
 
-    const updated = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
+    const updated = await Product.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { returnDocument: 'after', runValidators: true }
+    );
     if (!updated) return res.status(404).json({ error: 'Product not found' });
     return res.status(200).json(updated);
   } catch (err) {

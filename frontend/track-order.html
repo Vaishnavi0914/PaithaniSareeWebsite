@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Order | Rudra Paithani Yeola</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="page-footer-stick">
+  <header>
+    <div class="header-top"></div>
+    <div class="header-main">
+      <div class="logo">
+        <img src="images/logo.png" alt="Rudra Paithani Yeola Logo">
+        <h1>Rudra Paithani Yeola</h1>
+      </div>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="products.html">Products</a></li>
+          <li><a href="login.html">Login</a></li>
+          <li><a href="contact.html">Contact</a></li>
+        </ul>
+      </nav>
+      <div class="header-cart">
+        <a href="profile.html" class="nav-profile-link" aria-label="User Profile">
+          <span class="nav-profile-icon">&#128100;</span>
+        </a>
+        <a href="cart.html" class="nav-cart-link" aria-label="Cart">
+          <span class="nav-cart-icon">&#128722;</span>
+          <span class="nav-cart-badge" data-cart-count>0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="order-confirmation">
+    <section class="order-confirmation-card">
+      <div class="order-confirmation-header">
+        <div>
+          <span class="order-confirmation-kicker">Track Order</span>
+          <h2>Find your delivery status</h2>
+          <p class="muted">Enter your order ID and the email used at checkout.</p>
+        </div>
+      </div>
+
+      <form id="track-form" class="track-form">
+        <div class="track-grid">
+          <div class="track-field">
+            <label for="track-order-id">Order ID</label>
+            <input id="track-order-id" name="orderId" type="text" placeholder="Order ID" required>
+          </div>
+          <div class="track-field">
+            <label for="track-email">Email</label>
+            <input id="track-email" name="email" type="email" placeholder="you@example.com" required>
+          </div>
+          <div class="track-field">
+            <label for="track-phone">Phone (optional)</label>
+            <input id="track-phone" name="phone" type="tel" placeholder="+91 90000 00000">
+          </div>
+        </div>
+        <p id="track-message" class="form-message"></p>
+        <button class="btn-primary" type="submit">Track Order</button>
+      </form>
+    </section>
+
+    <section class="order-confirmation-card is-hidden" id="track-result">
+      <div class="order-confirmation-header">
+        <div>
+          <span class="order-confirmation-kicker">Order Status</span>
+          <h2 id="track-status-title">Order Update</h2>
+          <p class="muted" id="track-status-subtitle"></p>
+        </div>
+        <div class="order-confirmation-meta">
+          <p><strong>Order ID:</strong> <span id="track-order-display">-</span></p>
+          <p><strong>Status:</strong> <span id="track-status-display">-</span></p>
+          <p><strong>Placed:</strong> <span id="track-date-display">-</span></p>
+        </div>
+      </div>
+
+      <div class="tracking-steps" id="tracking-steps"></div>
+
+      <div class="order-confirmation-grid">
+        <div class="order-confirmation-block">
+          <h3>Delivery Details</h3>
+          <p id="track-name">-</p>
+          <p id="track-email-display">-</p>
+          <p id="track-phone-display">-</p>
+          <p id="track-address">-</p>
+        </div>
+        <div class="order-confirmation-block">
+          <h3>Payment Summary</h3>
+          <div class="order-confirmation-summary">
+            <div class="order-confirmation-summary-row">
+              <span>Subtotal</span>
+              <strong id="track-subtotal">â‚¹0</strong>
+            </div>
+            <div class="order-confirmation-summary-row">
+              <span>Shipping</span>
+              <strong id="track-shipping">â‚¹0</strong>
+            </div>
+            <div class="order-confirmation-summary-row total">
+              <span>Total</span>
+              <strong id="track-total">â‚¹0</strong>
+            </div>
+          </div>
+          <div class="tracking-shipment" id="tracking-shipment"></div>
+        </div>
+      </div>
+
+      <div class="order-confirmation-block">
+        <h3>Items in Your Order</h3>
+        <div id="track-items" class="order-confirmation-items"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="footer-logo-wrap">
+          <img src="images/logo.png" alt="Rudra Paithani Yeola Logo" class="footer-logo">
+          <div class="footer-brand-text">
+            <h3>Rudra Paithani Yeola</h3>
+            <p>Handwoven Paithani sarees from Yeola, crafted with heritage silk and timeless artistry.</p>
+          </div>
+        </div>
+        <div class="footer-contact">
+          <div class="footer-contact-line">
+            <span class="footer-info-icon" aria-hidden="true">&#9993;</span>
+            <a href="mailto:paithanisareewebsite@gmail.com">paithanisareewebsite@gmail.com</a>
+          </div>
+          <div class="footer-contact-line">
+            <span class="footer-info-icon" aria-hidden="true">&#128205;</span>
+            <a href="https://www.google.com/maps?q=Yeola,+Nashik,+Maharashtra+423401" target="_blank" rel="noopener noreferrer">Yeola, Nashik, Maharashtra - 423401</a>
+          </div>
+          <div class="footer-contact-line">
+            <span class="footer-info-icon" aria-hidden="true">&#128222;</span>
+            <a href="tel:+917888118137">+91 7888118137</a>
+          </div>
+        </div>
+        <div class="footer-social">
+          <a href="https://wa.me/917888118137" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+        </div>
+      </div>
+      <div class="footer-newsletter">
+        <h4>Get updates from Rudra</h4>
+        <p>New arrivals, heritage stories, and exclusive offers.</p>
+        <form class="footer-form" action="#" method="post">
+          <input type="email" name="email" placeholder="Enter your email" aria-label="Email address" autocomplete="email" required>
+          <button type="submit">Subscribe</button>
+        </form>
+        <small data-footer-note aria-live="polite">We respect your privacy. Unsubscribe anytime.</small>
+      </div>
+    </div>
+    <div class="footer-grid">
+      <div class="footer-col">
+        <h5>Shop</h5>
+        <a href="index.html">Home</a>
+        <a href="products.html">All Sarees</a>
+        <a href="cart.html">Cart</a>
+        <a href="profile.html">Profile</a>
+      </div>
+      <div class="footer-col">
+        <h5>Account</h5>
+        <a href="login.html">Login</a>
+        <a href="signup.html">Sign Up</a>
+        <a href="forgot-password.html">Forgot Password</a>
+        <a href="verify-email.html">Verify Email</a>
+      </div>
+      <div class="footer-col">
+        <h5>Support</h5>
+        <a href="contact.html">Contact Us</a>
+        <a href="care-guide.html">Paithani Care Guide</a>
+        <a href="return-refund.html">Return & Refund</a>
+        <a href="about.html">About Rudra</a>
+      </div>
+      <div class="footer-col">
+        <h5>Policies</h5>
+        <a href="terms.html">Terms of Service</a>
+        <a href="privacy.html">Privacy Policy</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 Rudra Paithani Yeola. All rights reserved.</p>
+      <div class="payment-badges">
+        <span class="payment-badge">Visa</span>
+        <span class="payment-badge">Mastercard</span>
+        <span class="payment-badge">UPI</span>
+        <span class="payment-badge">COD</span>
+      </div>
+      <a class="footer-admin-link" href="admin-login.html">Admin Login</a>
+    </div>
+  </footer>
+
+  <script src="js/api-config.js?v=20260410"></script>
+  <script src="js/script.js?v=20260410"></script>
+  <script src="js/track-order.js?v=20260410"></script>
+  <script src="js/back-button.js"></script>
+  <script src="js/whatsapp-chat.js"></script>
+</body>
+</html>

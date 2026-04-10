@@ -13,6 +13,19 @@ const orderItemSchema = new mongoose.Schema({
   notes: { type: String, default: '' }
 }, { _id: false });
 
+const trackingSchema = new mongoose.Schema({
+  carrier: { type: String, default: '' },
+  trackingNumber: { type: String, default: '' },
+  trackingUrl: { type: String, default: '' }
+}, { _id: false });
+
+const statusHistorySchema = new mongoose.Schema({
+  status: { type: String, required: true, trim: true },
+  note: { type: String, default: '' },
+  at: { type: Date, default: Date.now },
+  by: { type: String, default: '' }
+}, { _id: false });
+
 const orderSchema = new mongoose.Schema({
   userId: { type: String, default: '' },
   cartId: { type: String, default: '' },
@@ -27,11 +40,22 @@ const orderSchema = new mongoose.Schema({
   shippingAmount: { type: Number, default: 0 },
   taxAmount: { type: Number, default: 0 },
   totalAmount: { type: Number, default: 0 },
-  status: { type: String, default: 'placed' },
+  status: {
+    type: String,
+    default: 'placed',
+    enum: ['placed', 'paid', 'packed', 'shipped', 'delivered', 'returned', 'refunded', 'cancelled']
+  },
+  statusHistory: { type: [statusHistorySchema], default: [] },
+  tracking: { type: trackingSchema, default: () => ({}) },
+  packedAt: { type: Date },
+  shippedAt: { type: Date },
+  deliveredAt: { type: Date },
+  returnedAt: { type: Date },
+  refundedAt: { type: Date },
   cancelledAt: { type: Date },
   payment: {
     provider: { type: String, default: '' },
-    status: { type: String, default: 'pending' }, // pending | paid | failed
+    status: { type: String, default: 'pending' }, // pending | paid | failed | refunded
     amount: { type: Number, default: 0 },
     currency: { type: String, default: 'INR' },
     orderId: { type: String, default: '' },

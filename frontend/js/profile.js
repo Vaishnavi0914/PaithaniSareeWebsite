@@ -687,8 +687,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       const removeBtn = status === 'cancelled'
         ? `<button class="profile-btn ghost" type="button" data-remove-order="${o._id}">Remove from list</button>`
         : '';
-      const actions = cancelBtn || removeBtn
-        ? `<div class="profile-actions">${cancelBtn}${removeBtn}</div>`
+      const trackBtn = o._id
+        ? `<a class="profile-btn" href="track-order.html?orderId=${encodeURIComponent(o._id)}">Track Order</a>`
+        : '';
+      const actions = cancelBtn || removeBtn || trackBtn
+        ? `<div class="profile-actions">${trackBtn}${cancelBtn}${removeBtn}</div>`
+        : '';
+      const tracking = o.tracking || {};
+      const trackingLine = tracking.trackingNumber
+        ? `<div class="meta">Tracking: ${[tracking.carrier, tracking.trackingNumber].filter(Boolean).join(' · ')}</div>`
         : '';
       return `
         <div class="order-card">
@@ -698,6 +705,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
           <div class="meta">Placed: ${o.createdAt ? new Date(o.createdAt).toLocaleString() : ''}</div>
           <div class="meta">Total: Rs ${(o.totalAmount || 0).toLocaleString('en-IN')}</div>
+          ${trackingLine}
           <ul class="order-items">${items}</ul>
           ${actions}
         </div>

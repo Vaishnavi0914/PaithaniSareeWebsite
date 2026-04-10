@@ -13,14 +13,15 @@ const searchInput = document.getElementById('order-search');
 const statusFilter = document.getElementById('order-status-filter');
 const refreshBtn = document.getElementById('order-refresh');
 
-const STATUS_OPTIONS = ['placed', 'processing', 'shipped', 'delivered', 'cancelled'];
+const STATUS_OPTIONS = ['placed', 'paid', 'packed', 'shipped', 'delivered', 'returned', 'refunded', 'cancelled'];
 
 let orders = [];
 
 function normalizeOrderStatus(value) {
   const raw = String(value || '').toLowerCase().trim();
   if (STATUS_OPTIONS.includes(raw)) return raw;
-  if (raw === 'paid' || raw === 'pending_payment') return 'placed';
+  if (raw === 'processing') return 'paid';
+  if (raw === 'pending_payment') return 'placed';
   return 'placed';
 }
 
@@ -52,12 +53,53 @@ function buildStatusSelect(order) {
   `;
 }
 
+function buildTrackingSummary(order) {
+  const tracking = order.tracking || {};
+  const carrier = tracking.carrier ? `<div><strong>Carrier:</strong> ${tracking.carrier}</div>` : '';
+  const number = tracking.trackingNumber ? `<div><strong>No:</strong> ${tracking.trackingNumber}</div>` : '';
+  const url = tracking.trackingUrl
+    ? `<div><a href="${tracking.trackingUrl}" target="_blank" rel="noopener noreferrer">Tracking link</a></div>`
+    : '';
+  const shippedAt = order.shippedAt ? `<div><strong>Shipped:</strong> ${formatDate(order.shippedAt)}</div>` : '';
+  const deliveredAt = order.deliveredAt ? `<div><strong>Delivered:</strong> ${formatDate(order.deliveredAt)}</div>` : '';
+  const rows = [carrier, number, url, shippedAt, deliveredAt].filter(Boolean);
+  return rows.length ? `<div class="admin-tracking-summary">${rows.join('')}</div>` : '<span class="muted">Not set</span>';
+}
+
+function buildTrackingDetails(order) {
+  const tracking = order.tracking || {};
+  const carrier = tracking.carrier || '';
+  const trackingNumber = tracking.trackingNumber || '';
+  const trackingUrl = tracking.trackingUrl || '';
+  return `
+    <details class="admin-fulfillment">
+      <summary>Update tracking</summary>
+      <div class="admin-fulfillment-body">
+        <label class="admin-field">
+          Carrier
+          <input class="admin-input" data-tracking-field="carrier" data-id="${order._id}" type="text" value="${carrier}">
+        </label>
+        <label class="admin-field">
+          Tracking number
+          <input class="admin-input" data-tracking-field="trackingNumber" data-id="${order._id}" type="text" value="${trackingNumber}">
+        </label>
+        <label class="admin-field">
+          Tracking URL
+          <input class="admin-input" data-tracking-field="trackingUrl" data-id="${order._id}" type="url" value="${trackingUrl}">
+        </label>
+        <button class="admin-inline-btn" data-action="update-tracking" data-id="${order._id}" type="button">Save Tracking</button>
+      </div>
+    </details>
+  `;
+}
+
 function getFilteredOrders() {
   const term = (searchInput?.value || '').toLowerCase().trim();
   const status = statusFilter?.value || '';
   return orders.filter(order => {
     const customer = order.customer || {};
-    const haystack = [order._id, customer.name, customer.email, customer.phone]
+    const tracking = order.tracking || {};
+    const haystack = [order._id, customer.name, customer.email, customer.phone, tracking.trackingNumber]
       .filter(Boolean)
       .join(' ')
       .toLowerCase();
@@ -83,6 +125,7 @@ function renderOrders(list) {
           <th>Items</th>
           <th>Total</th>
           <th>Status</th>
+          <th>Tracking</th>
           <th>Date</th>
           <th>Actions</th>
         </tr>
@@ -102,6 +145,7 @@ function renderOrders(list) {
               <td>${itemCount}</td>
               <td>${formatPrice(order.totalAmount)}</td>
               <td><span class="status-pill status-${status}">${status}</span></td>
+              <td>${buildTrackingSummary(order)}${buildTrackingDetails(order)}</td>
               <td>${formatDate(order.createdAt)}</td>
               <td>
                 <div class="admin-table-actions">
@@ -149,6 +193,22 @@ async function updateOrderStatus(orderId, status) {
   }
 }
 
+async function updateOrderTracking(orderId, tracking) {
+  try {
+    const updated = await fetchJson(`${API_BASE}/admin/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tracking })
+    });
+    orders = orders.map(order => order._id === orderId ? updated : order);
+    renderOrders(getFilteredOrders());
+    recordAdminActivity(`Updated tracking for order ${orderId}`);
+  } catch (err) {
+    console.error('order tracking update error', err);
+    alert('Unable to update tracking.');
+  }
+}
+
 function bindFilters() {
   searchInput?.addEventListener('input', () => renderOrders(getFilteredOrders()));
   statusFilter?.addEventListener('change', () => renderOrders(getFilteredOrders()));
@@ -161,12 +221,27 @@ function bindFilters() {
 if (root) {
   root.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-action="update-status"]');
-    if (!button) return;
-    const orderId = button.dataset.id;
-    if (!orderId) return;
-    const select = document.getElementById(`order-status-${orderId}`);
-    const status = select?.value || 'placed';
-    updateOrderStatus(orderId, status);
+    if (button) {
+      const orderId = button.dataset.id;
+      if (!orderId) return;
+      const select = document.getElementById(`order-status-${orderId}`);
+      const status = select?.value || 'placed';
+      updateOrderStatus(orderId, status);
+      return;
+    }
+
+    const trackingBtn = event.target.closest('button[data-action="update-tracking"]');
+    if (trackingBtn) {
+      const orderId = trackingBtn.dataset.id;
+      if (!orderId) return;
+      const getField = (field) => root.querySelector(`[data-tracking-field="${field}"][data-id="${orderId}"]`);
+      const tracking = {
+        carrier: getField('carrier')?.value || '',
+        trackingNumber: getField('trackingNumber')?.value || '',
+        trackingUrl: getField('trackingUrl')?.value || ''
+      };
+      updateOrderTracking(orderId, tracking);
+    }
   });
 }
 

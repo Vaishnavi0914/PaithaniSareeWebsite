@@ -1,8 +1,9 @@
 ﻿const API_BASE = (window.location.origin.includes('localhost') ? 'http://localhost:5000' : window.location.origin);
 const API_CONFIG_STORAGE_KEY = 'paithani_api_base';
-const CHECKOUT_TAX_RATE = 0.05;
-const CHECKOUT_SHIPPING_FREE_THRESHOLD = 50000;
-const CHECKOUT_SHIPPING_FLAT = 250;
+const CHECKOUT_TAX_RATE = 0;
+const SHIPPING_RATE_NASHIK = 200;
+const SHIPPING_RATE_MAHARASHTRA = 300;
+const SHIPPING_RATE_REST = 500;
 const ORDER_CONFIRMATION_KEY = 'paithani_order_confirmation';
 
 function sanitizeApiBase(value) {
@@ -1019,13 +1020,33 @@ function updateCartBadge() {
     });
 }
 
-function calculateCartTotals(cart) {
+function normalizeLocationValue(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function resolveShippingCharge({ city, state, address } = {}) {
+    const cityValue = normalizeLocationValue(city);
+    const stateValue = normalizeLocationValue(state);
+    const addressValue = normalizeLocationValue(address);
+    const combined = `${cityValue} ${stateValue} ${addressValue}`.trim();
+    if (!combined) return null;
+    if (combined.includes('nashik')) {
+        return { amount: SHIPPING_RATE_NASHIK, label: `₹${SHIPPING_RATE_NASHIK} (Nashik)` };
+    }
+    if (stateValue.includes('maharashtra') || combined.includes('maharashtra')) {
+        return { amount: SHIPPING_RATE_MAHARASHTRA, label: `₹${SHIPPING_RATE_MAHARASHTRA} (Maharashtra)` };
+    }
+    return { amount: SHIPPING_RATE_REST, label: `₹${SHIPPING_RATE_REST} (Other states)` };
+}
+
+function calculateCartTotals(cart, location) {
     const subtotal = cart.reduce((sum, item) => sum + (Number(item.unitPrice) || 0) * (Number(item.qty) || 0), 0);
     const count = cart.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
-    const shipping = subtotal >= CHECKOUT_SHIPPING_FREE_THRESHOLD ? 0 : (subtotal > 0 ? CHECKOUT_SHIPPING_FLAT : 0);
+    const shippingInfo = resolveShippingCharge(location);
+    const shipping = shippingInfo ? shippingInfo.amount : 0;
     const tax = Math.round(subtotal * CHECKOUT_TAX_RATE);
     const total = Math.round(subtotal + shipping + tax);
-    return { subtotal, shipping, tax, total, count };
+    return { subtotal, shipping, tax, total, count, shippingInfo };
 }
 
 
@@ -1210,7 +1231,11 @@ function initCheckout() {
     };
 
     const buildOrderConfirmationPayload = ({ orderId, paymentStatus, totals, customer, cart }) => {
-        const safeTotals = totals || calculateCartTotals(cart || []);
+        const safeTotals = totals || calculateCartTotals(cart || [], {
+            city: customer?.city || '',
+            state: customer?.state || '',
+            address: customer?.address || ''
+        });
         return {
             orderId: orderId || '',
             paymentStatus: paymentStatus || 'pending',
@@ -1269,7 +1294,7 @@ function initCheckout() {
         }
     };
 
-    const saveLocalOrder = (email, cart, status = 'placed') => {
+    const saveLocalOrder = (email, cart, status = 'placed', location = {}) => {
         const normalizedEmail = normalizeEmail(email);
         if (!normalizedEmail || !cart || !cart.length) return;
         const key = `profile:${normalizedEmail}:orders`;
@@ -1281,7 +1306,7 @@ function initCheckout() {
             list = [];
         }
         if (!Array.isArray(list)) list = [];
-        const totals = calculateCartTotals(cart);
+        const totals = calculateCartTotals(cart, location);
         const order = {
             _id: `local_${Date.now()}`,
             createdAt: new Date().toISOString(),
@@ -1359,7 +1384,7 @@ function initCheckout() {
         }
 
         const method = getPaymentMethod();
-        const customer = { name, email, phone, address };
+        const customer = { name, email, phone, address, city, state, pincode };
         if (email) {
             localStorage.setItem('paithani_last_email', email.toLowerCase());
         }
@@ -1379,7 +1404,7 @@ function initCheckout() {
                 saveCart([]);
                 renderCartPage();
                 saveAddressToProfile(email, address);
-                saveLocalOrder(email, cart, 'pending');
+                saveLocalOrder(email, cart, 'pending', { city, state, address });
                 form.reset();
                 toggleButton(false);
                 window.location.href = `order-confirmation.html?orderId=${encodeURIComponent(confirmation.orderId || '')}`;
@@ -1473,7 +1498,7 @@ function initCheckout() {
                         saveCart([]);
                         renderCartPage();
                         saveAddressToProfile(email, address);
-                        saveLocalOrder(email, cart, 'placed');
+                        saveLocalOrder(email, cart, 'placed', { city, state, address });
                         form.reset();
                         toggleButton(false);
                         window.location.href = `order-confirmation.html?orderId=${encodeURIComponent(confirmation.orderId || '')}`;
@@ -1524,6 +1549,17 @@ function enrichCartItems(cart) {
             unitPrice
         };
     });
+}
+
+function getCheckoutLocationFromForm() {
+    const addressLineEl = document.getElementById('checkout-address-line');
+    const cityEl = document.getElementById('checkout-city');
+    const stateEl = document.getElementById('checkout-state');
+    return {
+        address: addressLineEl?.value || '',
+        city: cityEl?.value || '',
+        state: stateEl?.value || ''
+    };
 }
 
 function renderCartPage() {
@@ -1587,14 +1623,15 @@ function renderCartPage() {
         `;
     }).join('');
 
-    const totals = calculateCartTotals(cart);
+    const location = getCheckoutLocationFromForm();
+    const totals = calculateCartTotals(cart, location);
     if (countEl) countEl.textContent = totals.count;
     if (subtotalEl) subtotalEl.textContent = formatPrice(totals.subtotal);
-    if (shippingEl) shippingEl.textContent = formatPrice(totals.shipping);
+    if (shippingEl) shippingEl.textContent = totals.shippingInfo ? formatPrice(totals.shipping) : 'Enter city/state';
     if (taxEl) taxEl.textContent = formatPrice(totals.tax);
     if (totalEl) totalEl.textContent = formatPrice(totals.total);
     if (checkoutSubtotalEl) checkoutSubtotalEl.textContent = formatPrice(totals.subtotal);
-    if (checkoutShippingEl) checkoutShippingEl.textContent = formatPrice(totals.shipping);
+    if (checkoutShippingEl) checkoutShippingEl.textContent = totals.shippingInfo ? formatPrice(totals.shipping) : 'Enter city/state';
     if (checkoutTaxEl) checkoutTaxEl.textContent = formatPrice(totals.tax);
     if (checkoutTotalEl) checkoutTotalEl.textContent = formatPrice(totals.total);
 
@@ -1610,6 +1647,16 @@ function renderCartPage() {
             if (action === 'remove') removeCartItem(key);
         });
         container.dataset.bound = '1';
+    }
+
+    const checkoutForm = document.getElementById('checkout-form');
+    if (checkoutForm && !checkoutForm.dataset.bound) {
+        const inputs = checkoutForm.querySelectorAll('#checkout-address-line, #checkout-city, #checkout-state');
+        inputs.forEach(input => {
+            input.addEventListener('input', () => renderCartPage());
+            input.addEventListener('change', () => renderCartPage());
+        });
+        checkoutForm.dataset.bound = '1';
     }
 }
 
@@ -1649,8 +1696,12 @@ function initOrderConfirmationPage() {
     setText('confirm-address', data.customer?.address || '-');
     setText('confirm-subtotal', formatPrice(data.totals?.subtotal || 0));
     setText('confirm-shipping', formatPrice(data.totals?.shipping || 0));
-    setText('confirm-tax', formatPrice(data.totals?.tax || 0));
     setText('confirm-total', formatPrice(data.totals?.total || 0));
+    const trackLink = document.getElementById('track-order-link');
+    const trackOrderId = data.orderId || orderIdParam || '';
+    if (trackLink && trackOrderId) {
+        trackLink.setAttribute('href', `track-order.html?orderId=${encodeURIComponent(trackOrderId)}`);
+    }
 
     const itemsRoot = document.getElementById('confirm-items');
     if (itemsRoot) {
@@ -2305,7 +2356,8 @@ function initFooterNewsletter() {
     forms.forEach((form) => {
         const input = form.querySelector('input[type="email"]');
         const note = form.parentElement?.querySelector('[data-footer-note]') || form.parentElement?.querySelector('small');
-        form.addEventListener('submit', (event) => {
+        const submitBtn = form.querySelector('button[type="submit"]');
+        form.addEventListener('submit', async (event) => {
             event.preventDefault();
             const value = String(input?.value || '').trim();
             if (!value || !emailRegex.test(value)) {
@@ -2316,10 +2368,32 @@ function initFooterNewsletter() {
                 }
                 return;
             }
-            showToast('Thanks for subscribing! We will be in touch soon.', 'success', { icon: '✓', confetti: true });
-            if (note) note.textContent = 'Thanks for subscribing! We will be in touch soon.';
-            if (input) {
-                input.value = '';
+            if (submitBtn) submitBtn.disabled = true;
+            if (note) note.textContent = 'Subscribing...';
+            try {
+                const res = await fetch(`${API_BASE_URL}/subscribe`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: value })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    const message = data?.error || 'Unable to subscribe right now.';
+                    showToast(message, 'error', { icon: '!' });
+                    if (note) note.textContent = message;
+                    return;
+                }
+                const message = data?.message || 'Thanks for subscribing! We will be in touch soon.';
+                showToast(message, 'success', { icon: '✓', confetti: true });
+                if (note) note.textContent = message;
+                if (input) {
+                    input.value = '';
+                }
+            } catch (err) {
+                showToast('Unable to subscribe right now.', 'error', { icon: '!' });
+                if (note) note.textContent = 'Unable to subscribe right now.';
+            } finally {
+                if (submitBtn) submitBtn.disabled = false;
             }
         });
     });
@@ -2414,28 +2488,52 @@ function ensurePreorderModal() {
     modal.style.display = 'none';
     modal.innerHTML = `
         <div class="modal-content preorder-content">
-            <span class="close">&times;</span>
-            <h2>Preorder Request</h2>
-            <p class="muted">Share your details and we will confirm the preorder availability.</p>
-            <div class="preorder-summary">
-                <strong id="preorder-product-name">Product</strong>
-                <span id="preorder-product-price">0</span>
+            <div class="preorder-header">
+                <div>
+                    <span class="preorder-tag">Preorder</span>
+                    <h2>Reserve this saree</h2>
+                    <p class="muted">Share your details and we will confirm availability within 24 hours.</p>
+                </div>
+                <button type="button" class="close preorder-close" aria-label="Close preorder form">&times;</button>
             </div>
-            <form id="preorder-form">
-                <label>Your Name</label>
-                <input type="text" id="preorder-name" required>
-                <label>Email</label>
-                <input type="email" id="preorder-email" required>
-                <label>Phone</label>
-                <input type="text" id="preorder-phone" required>
-                <label>Delivery Address</label>
-                <textarea id="preorder-address" required></textarea>
-                <label>Quantity</label>
-                <input type="number" id="preorder-qty" min="1" value="1" required>
-                <label>Notes (optional)</label>
-                <textarea id="preorder-notes" placeholder="Share color, pallu, border preferences, or timeline."></textarea>
+            <div class="preorder-summary">
+                <div class="preorder-summary-main">
+                    <span class="preorder-label">Selected product</span>
+                    <strong id="preorder-product-name">Product</strong>
+                </div>
+                <span id="preorder-product-price" class="preorder-price">0</span>
+            </div>
+            <form id="preorder-form" class="preorder-form">
+                <div class="preorder-grid">
+                    <div class="preorder-field">
+                        <label for="preorder-name">Full Name</label>
+                        <input type="text" id="preorder-name" placeholder="Your full name" required>
+                    </div>
+                    <div class="preorder-field">
+                        <label for="preorder-email">Email</label>
+                        <input type="email" id="preorder-email" placeholder="you@example.com" required>
+                    </div>
+                    <div class="preorder-field">
+                        <label for="preorder-phone">Phone</label>
+                        <input type="text" id="preorder-phone" placeholder="+91 90000 00000" required>
+                    </div>
+                    <div class="preorder-field">
+                        <label for="preorder-qty">Quantity</label>
+                        <input type="number" id="preorder-qty" min="1" value="1" required>
+                    </div>
+                    <div class="preorder-field preorder-full">
+                        <label for="preorder-address">Delivery Address</label>
+                        <textarea id="preorder-address" placeholder="House no, street, area, city, state, pincode" required></textarea>
+                    </div>
+                    <div class="preorder-field preorder-full">
+                        <label for="preorder-notes">Notes (optional)</label>
+                        <textarea id="preorder-notes" placeholder="Share color, pallu, border preferences, or timeline."></textarea>
+                    </div>
+                </div>
                 <p id="preorder-message" class="form-message"></p>
-                <button type="submit" class="preorder-submit">Submit Preorder</button>
+                <div class="preorder-actions">
+                    <button type="submit" class="preorder-submit">Submit Preorder</button>
+                </div>
             </form>
         </div>
     `;
