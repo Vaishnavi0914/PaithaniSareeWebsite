@@ -1798,12 +1798,12 @@ function initProductZoom() {
     }
 }
 
-function setActiveCustomizationOptions(category) {
-    const normalized = getCategoryLabel(category);
-    if (normalized === 'Paithani Accessories') {
-        activeCustomizationOptions = accessoryCustomizationOptions;
-    } else {
+function setActiveCustomizationOptions(category, name = '') {
+    const productType = getProductType(category, name);
+    if (productType === 'saree') {
         activeCustomizationOptions = sareeCustomizationOptions;
+    } else {
+        activeCustomizationOptions = accessoryCustomizationOptions;
     }
 
     const allowed = new Set(activeCustomizationOptions.map(opt => opt.id));
@@ -1855,41 +1855,56 @@ function sanitizeCartItems(cart) {
 
 function getProductInfoRows(product) {
     const categoryLabel = getCategoryLabel(product.category);
-    const isAccessory = categoryLabel === 'Paithani Accessories';
-    const material = product.material
-        || (categoryLabel.includes('Semi Silk')
-            ? 'Semi Silk'
-            : categoryLabel.includes('Pure Silk')
-                ? 'Pure Silk'
-                : isAccessory
-                    ? 'Paithani Silk Blend'
-                    : 'Silk');
-    const weave = product.weave || 'Handwoven Paithani';
-    const origin = product.origin || 'Yeola, Maharashtra';
-    const work = product.work || product.motif || 'Traditional zari motifs';
-    const occasion = product.occasion || (isAccessory ? 'Festive, wedding, gifting' : 'Weddings, festive, cultural');
-    const care = product.care || 'Dry clean only';
+    const productType = getProductType(product.category, product.name);
 
-    if (isAccessory) {
-        return [
-            { label: 'Material', value: material },
-            { label: 'Craft', value: product.craft || 'Paithani hand finish' },
-            { label: 'Motif', value: product.motif || product.work || 'Classic zari pattern' },
-            { label: 'Size', value: product.size || 'Standard / custom on request' },
-            { label: 'Occasion', value: occasion },
-            { label: 'Care', value: care }
-        ];
+    const addRow = (rows, label, value, fallback = '', allowFallback = false) => {
+        const resolved = value || (allowFallback ? fallback : '');
+        if (resolved) rows.push({ label, value: resolved });
+    };
+
+    const baseMaterial = product.material || (categoryLabel.includes('Semi Silk')
+        ? 'Semi Silk'
+        : categoryLabel.includes('Pure Silk')
+            ? 'Pure Silk'
+            : productType === 'accessory'
+                ? 'Paithani Silk Blend'
+                : 'Silk');
+
+    if (productType === 'accessory') {
+        const rows = [];
+        addRow(rows, 'Material', baseMaterial, 'Paithani Silk Blend', true);
+        addRow(rows, 'Craft', product.craft, 'Paithani hand finish', true);
+        addRow(rows, 'Motif', product.motif || product.work, 'Classic zari pattern', true);
+        addRow(rows, 'Size', product.size, 'Standard / custom on request', true);
+        addRow(rows, 'Occasion', product.occasion, 'Festive, wedding, gifting', true);
+        addRow(rows, 'Care', product.care, 'Dry clean only', true);
+        return rows;
+    }
+
+    if (productType === 'family') {
+        const rows = [];
+        addRow(rows, 'Fabric', product.material, 'Silk blend', true);
+        addRow(rows, 'Set Includes', product.setIncludes || product.includes || product.components);
+        addRow(rows, 'Family Group', product.familyGroup);
+        addRow(rows, 'Size', product.size);
+        addRow(rows, 'Occasion', product.occasion, 'Festive, cultural', true);
+        addRow(rows, 'Care', product.care, 'Dry clean only', true);
+        addRow(rows, 'Origin', product.origin, 'Yeola, Maharashtra', true);
+        if (!rows.length) {
+            rows.push({ label: 'Details', value: 'Contact us for sizing and styling details.' });
+        }
+        return rows;
     }
 
     return [
-        { label: 'Fabric', value: material },
-        { label: 'Weave', value: weave },
-        { label: 'Zari/Work', value: work },
+        { label: 'Fabric', value: baseMaterial || 'Silk' },
+        { label: 'Weave', value: product.weave || 'Handwoven Paithani' },
+        { label: 'Zari/Work', value: product.work || product.motif || 'Traditional zari motifs' },
         { label: 'Length', value: product.length || '5.5 m + blouse piece' },
         { label: 'Blouse Piece', value: product.blousePiece || 'Included' },
-        { label: 'Origin', value: origin },
-        { label: 'Occasion', value: occasion },
-        { label: 'Care', value: care }
+        { label: 'Origin', value: product.origin || 'Yeola, Maharashtra' },
+        { label: 'Occasion', value: product.occasion || 'Weddings, festive, cultural' },
+        { label: 'Care', value: product.care || 'Dry clean only' }
     ];
 }
 
@@ -1990,18 +2005,27 @@ async function loadRelatedProducts(currentProduct) {
     renderRelatedProducts(currentProduct, related.slice(0, 4));
 }
 
-function updateCustomizationCopy(category) {
+function updateCustomizationCopy(category, name = '') {
     const heading = document.querySelector('.customization-section h3');
     const notesField = document.getElementById('custom-notes');
-    const categoryLabel = getCategoryLabel(category);
-    const isAccessory = categoryLabel === 'Paithani Accessories';
+    const productType = getProductType(category, name);
     if (heading) {
-        heading.textContent = isAccessory ? 'Customize Your Accessory' : 'Customize Your Saree';
+        if (productType === 'family') {
+            heading.textContent = 'Customize Your Family Set';
+        } else if (productType === 'accessory') {
+            heading.textContent = 'Customize Your Accessory';
+        } else {
+            heading.textContent = 'Customize Your Saree';
+        }
     }
     if (notesField) {
-        notesField.placeholder = isAccessory
-            ? 'Share any special requests (size, color, gifting notes).'
-            : 'Share any special requests (colors, border, blouse size).';
+        if (productType === 'family') {
+            notesField.placeholder = 'Share any special requests (size, colors, gifting notes).';
+        } else if (productType === 'accessory') {
+            notesField.placeholder = 'Share any special requests (size, color, gifting notes).';
+        } else {
+            notesField.placeholder = 'Share any special requests (colors, border, blouse size).';
+        }
     }
 }
 
@@ -2090,8 +2114,8 @@ function displayProductDetails(product) {
         contactBtn.href = `contact.html?${params.toString()}`;
     }
 
-    setActiveCustomizationOptions(product.category);
-    updateCustomizationCopy(product.category);
+    setActiveCustomizationOptions(product.category, product.name);
+    updateCustomizationCopy(product.category, product.name);
     updateCustomizationSummary();
 }
 
@@ -2646,8 +2670,10 @@ const CATEGORY_ORDER = [
 function normalizeCategory(category) {
     if (!category) return 'Pure Silk Paithani';
     const normalized = String(category).toLowerCase().trim();
-    if (normalized.includes('family')) return 'Family';
-    if (normalized.includes('access')) return 'Paithani Accessories';
+    const familyKeywords = ['family', 'child', 'kid', 'kids', 'boy', 'girl', 'parent', 'grand', 'kurta', 'dhoti', 'sherwani', 'lehenga', 'choli'];
+    const accessoryKeywords = ['access', 'dupatta', 'jacket', 'cap', 'blouse', 'stole', 'shawl', 'bag'];
+    if (familyKeywords.some(key => normalized.includes(key))) return 'Family';
+    if (accessoryKeywords.some(key => normalized.includes(key))) return 'Paithani Accessories';
     if (normalized.includes('semi')) return 'Semi Silk Paithani';
     if (normalized.includes('pure')) return 'Pure Silk Paithani';
     return category;
@@ -2656,6 +2682,24 @@ function normalizeCategory(category) {
 function getCategoryLabel(category) {
     const normalized = normalizeCategory(category);
     return normalized || 'Pure Silk Paithani';
+}
+
+function getProductType(category, name = '') {
+    const categoryLabel = getCategoryLabel(category);
+    const rawCategory = String(category || '').toLowerCase();
+    const rawName = String(name || '').toLowerCase();
+    const familyKeywords = ['family', 'child', 'kid', 'kids', 'boy', 'girl', 'parent', 'grand', 'kurta', 'dhoti', 'sherwani', 'lehenga', 'choli'];
+    const accessoryKeywords = ['access', 'dupatta', 'jacket', 'cap', 'blouse', 'stole', 'shawl', 'bag'];
+
+    if (categoryLabel === 'Paithani Accessories'
+        || accessoryKeywords.some(key => rawCategory.includes(key) || rawName.includes(key))) {
+        return 'accessory';
+    }
+    if (categoryLabel === 'Family'
+        || familyKeywords.some(key => rawCategory.includes(key) || rawName.includes(key))) {
+        return 'family';
+    }
+    return 'saree';
 }
 
 const FAMILY_GROUPS = ['Children', 'Parents', 'Grandparents'];

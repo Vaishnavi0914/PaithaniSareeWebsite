@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -671,6 +671,8 @@
   </div>
 </footer>
 
+    <script src="js/runtime-config.js"></script>
+
     <script src="js/api-config.js?v=20260405"></script>
 <script src="js/script.js?v=20260405g"></script>
 <script src="js/profile.js?v=20260405h"></script>
@@ -730,7 +732,7 @@
         const el = document.getElementById('last-login');
         if (el) {
           const date = new Date(lastLogin);
-          el.textContent = Number.isNaN(date.getTime()) ? 'â€”' : date.toLocaleString();
+          el.textContent = Number.isNaN(date.getTime()) ? '???' : date.toLocaleString();
         }
       };
 
@@ -800,6 +802,7 @@
   </script>
 </body>
 </html>
+
 
 
 

@@ -11,12 +11,18 @@ const nodemailer = require('nodemailer');
 const bcrypt = require('bcrypt');
 const fs = require('fs');
 const vm = require('vm');
+const cloudinary = require('cloudinary').v2;
 
 // Ensure env vars load even when server.js is started from repo root.
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-// Prefer public DNS resolvers for MongoDB SRV lookups (avoids local DNS issues).
-dns.setServers(['8.8.8.8', '1.1.1.1']);
+// Optional: Override DNS servers for MongoDB SRV lookups if needed.
+// Set DNS_SERVERS in .env like: DNS_SERVERS=8.8.8.8,1.1.1.1
+const dnsServersEnv = (process.env.DNS_SERVERS || '').split(',').map((s) => s.trim()).filter(Boolean);
+if (dnsServersEnv.length) {
+  dns.setServers(dnsServersEnv);
+  console.log(`Using custom DNS servers: ${dnsServersEnv.join(', ')}`);
+}
 
 const Product = require('./models/Product');
 const User = require('./models/User');
@@ -125,6 +131,25 @@ const razorpayClient = hasRazorpay
   ? new Razorpay({ key_id: RAZORPAY_KEY_ID, key_secret: RAZORPAY_KEY_SECRET })
   : null;
 
+// Cloudinary configuration (for product image uploads)
+const CLOUDINARY_CLOUD_NAME = (process.env.CLOUDINARY_CLOUD_NAME || '').trim();
+const CLOUDINARY_API_KEY = (process.env.CLOUDINARY_API_KEY || '').trim();
+const CLOUDINARY_API_SECRET = (process.env.CLOUDINARY_API_SECRET || '').trim();
+const CLOUDINARY_FOLDER = (process.env.CLOUDINARY_FOLDER || 'paithani-products').trim();
+const hasCloudinary = Boolean(CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET);
+const cloudinaryEnvProvided = Boolean(CLOUDINARY_CLOUD_NAME || CLOUDINARY_API_KEY || CLOUDINARY_API_SECRET);
+
+if (hasCloudinary) {
+  cloudinary.config({
+    cloud_name: CLOUDINARY_CLOUD_NAME,
+    api_key: CLOUDINARY_API_KEY,
+    api_secret: CLOUDINARY_API_SECRET,
+    secure: true
+  });
+} else if (cloudinaryEnvProvided) {
+  console.warn('Cloudinary credentials are incomplete. Product images will be stored as-is.');
+}
+
 // Admin credentials (set in .env)
 const ADMIN_USERNAME = (process.env.ADMIN_USERNAME || '').trim();
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
@@ -190,6 +215,34 @@ function resolveAppBaseUrl(req) {
   if (baseHost) return `${proto || 'https'}://${baseHost}`;
   if (host) return `${proto || req?.protocol || 'http'}://${host}`;
   return 'http://localhost:5000';
+}
+
+const DATA_URL_IMAGE_RE = /^data:image\/[a-z0-9.+-]+;base64,/i;
+
+function isDataUrlImage(value) {
+  return typeof value === 'string' && DATA_URL_IMAGE_RE.test(value);
+}
+
+async function uploadProductImageToCloudinary(dataUrl, { publicId } = {}) {
+  if (!hasCloudinary || !dataUrl) return dataUrl;
+  const options = {
+    resource_type: 'image'
+  };
+  if (CLOUDINARY_FOLDER) options.folder = CLOUDINARY_FOLDER;
+  if (publicId) options.public_id = publicId;
+  const result = await cloudinary.uploader.upload(dataUrl, options);
+  return result?.secure_url || result?.url || dataUrl;
+}
+
+async function resolveProductImage(imageValue) {
+  if (!isDataUrlImage(imageValue)) return imageValue;
+  if (!hasCloudinary) return imageValue;
+  try {
+    return await uploadProductImageToCloudinary(imageValue);
+  } catch (err) {
+    console.error('Cloudinary upload failed', err);
+    throw new Error('Unable to upload product image to Cloudinary.');
+  }
 }
 
 const ORDER_STATUS_FLOW = ['placed', 'paid', 'packed', 'shipped', 'delivered', 'returned', 'refunded', 'cancelled'];
@@ -1967,24 +2020,25 @@ app.get('/admin/products/:id', async (req, res) => {
   }
 });
 
-app.post('/admin/products', async (req, res) => {
-  try {
-    const { name, price, description, image, category, familyGroup, sku, status, stock, lowStockThreshold, discountType, discountValue, featured } = req.body;
+  app.post('/admin/products', async (req, res) => {
+    try {
+      const { name, price, description, image, category, familyGroup, sku, status, stock, lowStockThreshold, discountType, discountValue, featured } = req.body;
 
-    if (!name || price === undefined || !String(description || '').trim()) {
-      return res.status(400).json({ error: 'Name, price, and description are required' });
-    }
+      if (!name || price === undefined || !String(description || '').trim()) {
+        return res.status(400).json({ error: 'Name, price, and description are required' });
+      }
 
-    const prod = new Product({
-      name,
-      price,
-      description,
-      image,
-      category,
-      familyGroup,
-      sku,
-      status: status || 'new',
-      stock,
+      const resolvedImage = await resolveProductImage(image);
+      const prod = new Product({
+        name,
+        price,
+        description,
+        image: resolvedImage,
+        category,
+        familyGroup,
+        sku,
+        status: status || 'new',
+        stock,
       lowStockThreshold,
       featured: Boolean(featured),
       discountType: discountType || 'none',
@@ -1999,17 +2053,17 @@ app.post('/admin/products', async (req, res) => {
   }
 });
 
-app.put('/admin/products/:id', async (req, res) => {
-  try {
-    const { name, price, description, image, category, familyGroup, sku, status, stock, lowStockThreshold, discountType, discountValue, featured } = req.body;
-    const updateData = {};
+  app.put('/admin/products/:id', async (req, res) => {
+    try {
+      const { name, price, description, image, category, familyGroup, sku, status, stock, lowStockThreshold, discountType, discountValue, featured } = req.body;
+      const updateData = {};
 
     if (name !== undefined) updateData.name = name;
     if (price !== undefined) updateData.price = price;
     if (description !== undefined) updateData.description = description;
-    if (category !== undefined) updateData.category = category;
-    if (familyGroup !== undefined) updateData.familyGroup = familyGroup;
-    if (image !== undefined) updateData.image = image;
+      if (category !== undefined) updateData.category = category;
+      if (familyGroup !== undefined) updateData.familyGroup = familyGroup;
+      if (image !== undefined) updateData.image = await resolveProductImage(image);
     if (sku !== undefined) updateData.sku = sku;
     if (status !== undefined) updateData.status = status;
     if (stock !== undefined) updateData.stock = stock;

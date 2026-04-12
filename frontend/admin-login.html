@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -41,6 +41,8 @@
       <p class="admin-login-meta">Need access? Contact the store owner.</p>
     </section>
   </main>
+
+    <script src="js/runtime-config.js"></script>
 
     <script src="js/api-config.js?v=20260405"></script>
 <script src="js/script.js?v=20260405g"></script>
@@ -97,7 +99,7 @@
             sessionStorage.setItem('adminToken', data.token);
           }
           sessionStorage.setItem('adminSession', '1');
-          setMessage('Login successful. Redirectingâ€¦', 'success');
+          setMessage('Login successful. Redirecting???', 'success');
           window.location.href = 'admin-dashboard.html';
         } catch (err) {
           setMessage('Unable to reach server. Please try again.');
@@ -109,6 +111,7 @@
   </script>
 </body>
 </html>
+
 
 
 
