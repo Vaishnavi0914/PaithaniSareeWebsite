@@ -1,4 +1,4 @@
-﻿const API_BASE = (window.location.origin.includes('localhost') ? 'http://localhost:5000' : window.location.origin);
+const API_BASE = (window.location.origin.includes('localhost') ? 'http://localhost:5000' : window.location.origin);
 const API_CONFIG_STORAGE_KEY = 'paithani_api_base';
 const CHECKOUT_TAX_RATE = 0;
 const SHIPPING_RATE_NASHIK = 200;
@@ -236,7 +236,7 @@ function buildMarketingNotifications() {
         const label = sale.label || 'Festive Offer';
         items.push({
             title: 'Sale is Live',
-            body: discountText ? `${label} • ${discountText}` : label
+            body: discountText ? `${label} ? ${discountText}` : label
         });
     }
 
@@ -413,7 +413,7 @@ function showInlineMessage(message, type = 'success') {
         close.type = 'button';
         close.className = 'inline-message-close';
         close.setAttribute('aria-label', 'Close notification');
-        close.textContent = '×';
+        close.textContent = '?';
         close.addEventListener('click', () => {
             if (inlineMessageTimer) clearTimeout(inlineMessageTimer);
             bar.remove();
@@ -655,7 +655,7 @@ let activeCustomizationOptions = sareeCustomizationOptions;
 
 function formatPrice(value) {
     const numberValue = Number(value) || 0;
-    return `₹${numberValue.toLocaleString('en-IN')}`;
+    return `?${numberValue.toLocaleString('en-IN')}`;
 }
 
 const SETTINGS_KEY = 'admin_settings';
@@ -745,7 +745,7 @@ function renderSaleBanner() {
         ? (sale.type === 'percent' ? `${sale.value}% OFF` : `Rs ${sale.value} OFF`)
         : '';
     const label = sale.label || 'Festive Offer';
-    banner.textContent = discountText ? `${label} • ${discountText}` : label;
+    banner.textContent = discountText ? `${label} ? ${discountText}` : label;
     const headerMain = header.querySelector('.header-main');
     if (headerMain) {
         header.insertBefore(banner, headerMain);
@@ -1031,12 +1031,12 @@ function resolveShippingCharge({ city, state, address } = {}) {
     const combined = `${cityValue} ${stateValue} ${addressValue}`.trim();
     if (!combined) return null;
     if (combined.includes('nashik')) {
-        return { amount: SHIPPING_RATE_NASHIK, label: `₹${SHIPPING_RATE_NASHIK} (Nashik)` };
+        return { amount: SHIPPING_RATE_NASHIK, label: `?${SHIPPING_RATE_NASHIK} (Nashik)` };
     }
     if (stateValue.includes('maharashtra') || combined.includes('maharashtra')) {
-        return { amount: SHIPPING_RATE_MAHARASHTRA, label: `₹${SHIPPING_RATE_MAHARASHTRA} (Maharashtra)` };
+        return { amount: SHIPPING_RATE_MAHARASHTRA, label: `?${SHIPPING_RATE_MAHARASHTRA} (Maharashtra)` };
     }
-    return { amount: SHIPPING_RATE_REST, label: `₹${SHIPPING_RATE_REST} (Other states)` };
+    return { amount: SHIPPING_RATE_REST, label: `?${SHIPPING_RATE_REST} (Other states)` };
 }
 
 function calculateCartTotals(cart, location) {
@@ -2408,7 +2408,7 @@ function initFooterNewsletter() {
                     return;
                 }
                 const message = data?.message || 'Thanks for subscribing! We will be in touch soon.';
-                showToast(message, 'success', { icon: '✓', confetti: true });
+                showToast(message, 'success', { icon: '?', confetti: true });
                 if (note) note.textContent = message;
                 if (input) {
                     input.value = '';
@@ -2463,7 +2463,7 @@ document.addEventListener('DOMContentLoaded', initFooterAdminReveal);
 function showToast(message, type = 'success', options = {}) {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    const icon = options.icon || (type === 'success' ? '✓' : '!');
+    const icon = options.icon || (type === 'success' ? '?' : '!');
     toast.innerHTML = `
         <span class="toast-icon">${icon}</span>
         <span class="toast-text">${message}</span>
@@ -2764,7 +2764,7 @@ function createProductCard(product) {
 
     return `
         <div class="product-card" data-product-id="${productId}">
-            <button class="wishlist-btn ${wishlistActive ? 'active' : ''}" data-product-id="${productId}" aria-pressed="${wishlistActive ? 'true' : 'false'}" aria-label="${wishlistActive ? 'Remove from wishlist' : 'Add to wishlist'}">❤</button>
+            <button class="wishlist-btn ${wishlistActive ? 'active' : ''}" data-product-id="${productId}" aria-pressed="${wishlistActive ? 'true' : 'false'}" aria-label="${wishlistActive ? 'Remove from wishlist' : 'Add to wishlist'}">?</button>
             <img src="${imageUrl}" alt="${product.name}" class="${isPlaceholder ? 'placeholder-img' : ''}">
             <h4>${product.name}</h4>
             ${priceMarkup}
@@ -2997,13 +2997,14 @@ function applyProductFilters() {
     }
 
     if (isCatalogPage && currentFilters.category !== 'all') {
-        if (currentFilters.category === 'Family') {
+        const selectedCategory = String(currentFilters.category || '').trim();
+        if (selectedCategory === 'Family') {
             filtered = filtered.filter(product => getFamilyGroup(product));
             if (currentFilters.family && currentFilters.family !== 'all') {
                 filtered = filtered.filter(product => getFamilyGroup(product) === currentFilters.family);
             }
         } else {
-            filtered = filtered.filter(product => getCategoryLabel(product.category) === currentFilters.category);
+            filtered = filtered.filter(product => normalizeCategory(product.category) === normalizeCategory(selectedCategory));
         }
     }
 
@@ -3096,7 +3097,10 @@ async function loadProducts() {
     try {
         const res = await fetch(API_BASE_URL + '/products');
         if (!res.ok) throw new Error(res.statusText);
-        const products = await res.json();
+        const payload = await res.json();
+        const products = Array.isArray(payload)
+            ? payload
+            : (Array.isArray(payload?.value) ? payload.value : (Array.isArray(payload?.data) ? payload.data : []));
         if (Array.isArray(products) && products.length) {
             allProducts = products.map((item, idx) => ({ ...item, __idx: featuredRank(item, idx) }));
             cacheProducts(allProducts);
@@ -3353,7 +3357,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 localStorage.setItem('authEmail', email);
                 setFormMessage(loginMessage, 'Login successful! Redirecting...', 'success');
-                showToast('Welcome back!', 'success', { confetti: true, icon: '✓' });
+                showToast('Welcome back!', 'success', { confetti: true, icon: '?' });
                 loginForm.reset();
                 setTimeout(() => { window.location.href = 'index.html'; }, 800);
             } catch (err) {
@@ -3436,12 +3440,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (data.needsVerification) {
                     setFormMessage(signupMessage, data.message || 'Verification email sent. Please check your inbox.', 'success');
-                    showToast('Verification email sent', 'success', { icon: '✉' });
+                    showToast('Verification email sent', 'success', { icon: '?' });
                     signupForm.reset();
                     return;
                 }
                 setFormMessage(signupMessage, 'Account created! Redirecting to login...', 'success');
-                showToast('Account created!', 'success', { confetti: true, icon: '✓' });
+                showToast('Account created!', 'success', { confetti: true, icon: '?' });
                 signupForm.reset();
                 setTimeout(() => { window.location.href = 'login.html'; }, 900);
             } catch (err) {
@@ -3589,6 +3593,8 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshUserNotifications();
     });
 });
+
+
 
 
 
