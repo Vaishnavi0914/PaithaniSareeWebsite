@@ -1700,7 +1700,10 @@ function initOrderConfirmationPage() {
     const trackLink = document.getElementById('track-order-link');
     const trackOrderId = data.orderId || orderIdParam || '';
     if (trackLink && trackOrderId) {
-        trackLink.setAttribute('href', `track-order.html?orderId=${encodeURIComponent(trackOrderId)}`);
+        const trackParams = new URLSearchParams({ orderId: trackOrderId });
+        const trackEmail = String(data.customer?.email || '').trim().toLowerCase();
+        if (trackEmail) trackParams.set('email', trackEmail);
+        trackLink.setAttribute('href', `track-order.html?${trackParams.toString()}`);
     }
 
     const itemsRoot = document.getElementById('confirm-items');

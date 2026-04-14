@@ -2,6 +2,8 @@
   if (!window.location.pathname.includes('track-order.html')) return;
 
   const API_BASE = window.API_BASE_URL || window.PAITHANI_API_BASE || window.location.origin;
+  const TRACKING_EMAIL_KEY = 'paithani_last_email';
+
   const form = document.getElementById('track-form');
   const messageEl = document.getElementById('track-message');
   const resultCard = document.getElementById('track-result');
@@ -19,7 +21,11 @@
 
   const formatPrice = (value) => {
     const amount = Number(value) || 0;
-    return `Rs ${amount.toLocaleString('en-IN')}`;
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(amount);
   };
 
   const formatDate = (value) => {
@@ -91,7 +97,7 @@
     if (number) parts.push(`<div><strong>Tracking #:</strong> ${number}</div>`);
     if (url) parts.push(`<div><a href="${url}" target="_blank" rel="noopener noreferrer">Open tracking link</a></div>`);
     if (!parts.length) {
-      container.innerHTML = `<p class="muted">Tracking details will appear here once shipped.</p>`;
+      container.innerHTML = '<p class="muted">Tracking details will appear here once shipped.</p>';
       return;
     }
     container.innerHTML = `
@@ -151,19 +157,39 @@
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const err = data?.error || 'Unable to find that order. Please verify the details.';
-      const error = new Error(err);
+      const error = new Error(data?.error || 'Unable to find that order. Please verify the details.');
       error.status = res.status;
       throw error;
     }
     return data;
   }
 
+  const getStoredEmail = () => {
+    try {
+      const fromLocal = String(localStorage.getItem(TRACKING_EMAIL_KEY) || '').trim().toLowerCase();
+      if (fromLocal) return fromLocal;
+      const authRaw = localStorage.getItem('authUser');
+      if (authRaw) {
+        const parsed = JSON.parse(authRaw);
+        const email = String(parsed?.email || '').trim().toLowerCase();
+        if (email) return email;
+      }
+      const authEmail = String(localStorage.getItem('authEmail') || '').trim().toLowerCase();
+      return authEmail;
+    } catch (err) {
+      return '';
+    }
+  };
+
   const params = new URLSearchParams(window.location.search || '');
-  const prefillOrderId = params.get('orderId') || '';
-  const prefillEmail = params.get('email') || '';
+  const prefillOrderId = (params.get('orderId') || '').trim();
+  const prefillEmail = (params.get('email') || '').trim().toLowerCase();
+
   if (prefillOrderId && orderIdInput) orderIdInput.value = prefillOrderId;
-  if (prefillEmail && emailInput) emailInput.value = prefillEmail;
+  if (emailInput) {
+    const storedEmail = getStoredEmail();
+    emailInput.value = prefillEmail || storedEmail || '';
+  }
 
   if (form) {
     form.addEventListener('submit', async (event) => {
@@ -172,20 +198,32 @@
       const orderId = orderIdInput?.value?.trim();
       const email = emailInput?.value?.trim().toLowerCase();
       const phone = phoneInput?.value?.trim();
+
       if (!orderId || !email) {
-        setMessage('Please enter both order ID and email.', 'error');
+        setMessage('Please enter both Order ID and checkout email.', 'error');
         return;
       }
+
       try {
         setMessage('Checking order status...', 'success');
         const data = await fetchTracking({ orderId, email, phone });
+        localStorage.setItem(TRACKING_EMAIL_KEY, email);
         setMessage('');
         renderResult(data);
         resultCard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } catch (err) {
         console.error('track order error', err);
+        if (resultCard) resultCard.classList.add('is-hidden');
+        if (err?.status === 404) {
+          setMessage('Order not found. Please use the exact Order ID from confirmation and the same checkout email.', 'error');
+          return;
+        }
         setMessage(err?.message || 'Unable to track order right now.', 'error');
       }
     });
+
+    if (prefillOrderId && prefillEmail) {
+      form.dispatchEvent(new Event('submit', { cancelable: true }));
+    }
   }
 })();
