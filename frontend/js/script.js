@@ -655,7 +655,7 @@ let activeCustomizationOptions = sareeCustomizationOptions;
 
 function formatPrice(value) {
     const numberValue = Number(value) || 0;
-    return `?${numberValue.toLocaleString('en-IN')}`;
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(numberValue);
 }
 
 const SETTINGS_KEY = 'admin_settings';
@@ -1031,12 +1031,12 @@ function resolveShippingCharge({ city, state, address } = {}) {
     const combined = `${cityValue} ${stateValue} ${addressValue}`.trim();
     if (!combined) return null;
     if (combined.includes('nashik')) {
-        return { amount: SHIPPING_RATE_NASHIK, label: `?${SHIPPING_RATE_NASHIK} (Nashik)` };
+        return { amount: SHIPPING_RATE_NASHIK, label: `${formatPrice(SHIPPING_RATE_NASHIK)} (Nashik)` };
     }
     if (stateValue.includes('maharashtra') || combined.includes('maharashtra')) {
-        return { amount: SHIPPING_RATE_MAHARASHTRA, label: `?${SHIPPING_RATE_MAHARASHTRA} (Maharashtra)` };
+        return { amount: SHIPPING_RATE_MAHARASHTRA, label: `${formatPrice(SHIPPING_RATE_MAHARASHTRA)} (Maharashtra)` };
     }
-    return { amount: SHIPPING_RATE_REST, label: `?${SHIPPING_RATE_REST} (Other states)` };
+    return { amount: SHIPPING_RATE_REST, label: `${formatPrice(SHIPPING_RATE_REST)} (Other states)` };
 }
 
 function calculateCartTotals(cart, location) {
@@ -1057,7 +1057,7 @@ function updateWishlistButtons() {
         const active = wishlistIds.has(String(id));
         btn.classList.toggle('active', active);
         btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-        btn.setAttribute('aria-label', active ? 'Remove from wishlist' : 'Add to wishlist');
+        btn.setAttribute('aria-label', active ? 'Remove from wishlist' : 'Add to wishlist');         btn.innerHTML = active ? '&#9829;' : '&#9825;';
     });
 }
 
@@ -2764,7 +2764,7 @@ function createProductCard(product) {
 
     return `
         <div class="product-card" data-product-id="${productId}">
-            <button class="wishlist-btn ${wishlistActive ? 'active' : ''}" data-product-id="${productId}" aria-pressed="${wishlistActive ? 'true' : 'false'}" aria-label="${wishlistActive ? 'Remove from wishlist' : 'Add to wishlist'}">?</button>
+            <button class="wishlist-btn ${wishlistActive ? 'active' : ''}" data-product-id="${productId}" aria-pressed="${wishlistActive ? 'true' : 'false'}" aria-label="${wishlistActive ? 'Remove from wishlist' : 'Add to wishlist'}">${wishlistActive ? '&#9829;' : '&#9825;'}</button>
             <img src="${imageUrl}" alt="${product.name}" class="${isPlaceholder ? 'placeholder-img' : ''}">
             <h4>${product.name}</h4>
             ${priceMarkup}
@@ -3232,7 +3232,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         if (productName && messageField) {
-            const prettyPrice = productPrice ? ` (Price: ?${Number(productPrice || 0).toLocaleString('en-IN')})` : '';
+            const prettyPrice = productPrice ? ` (Price: ${formatPrice(Number(productPrice || 0))})` : '';
             messageField.value = `I am interested in ${productName}${prettyPrice}. Please share availability and buying options. Product ID: ${productId || ''}`;
         }
         if (productName && nameField && !nameField.value) {
@@ -3593,6 +3593,8 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshUserNotifications();
     });
 });
+
+
 
 
 
