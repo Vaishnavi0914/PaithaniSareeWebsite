@@ -3,7 +3,7 @@
 // Example: const API_BASE = 'https://api.example.com';
 (function () {
   if (typeof window === 'undefined') return;
-  const API_BASE = 'https://paithanisareewebsite.onrender.com';
+  const API_BASE = 'https://api.rudrapaithaniyeola.online';
   if (!API_BASE) return;
   if (!window.PAITHANI_API_BASE) {
     window.PAITHANI_API_BASE = API_BASE;
