@@ -120,16 +120,36 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key_change_in_producti
 // Payment gateway configuration
 const RAZORPAY_KEY_ID = (process.env.RAZORPAY_KEY_ID || '').trim();
 const RAZORPAY_KEY_SECRET = (process.env.RAZORPAY_KEY_SECRET || '').trim();
+const RAZORPAY_MODE = (process.env.RAZORPAY_MODE || (process.env.NODE_ENV === 'production' ? 'live' : 'test')).trim().toLowerCase();
 const isPlaceholderKey = (value = '') => {
   const lower = String(value).toLowerCase();
   return !lower || lower.includes('your_key_id_here') || lower.includes('your_key_secret_here');
 };
+const razorpayKeyMode = RAZORPAY_KEY_ID.startsWith('rzp_live_')
+  ? 'live'
+  : (RAZORPAY_KEY_ID.startsWith('rzp_test_') ? 'test' : '');
+const razorpayModeMismatch = Boolean(
+  RAZORPAY_KEY_ID &&
+  ((RAZORPAY_MODE === 'live' && razorpayKeyMode === 'test') ||
+    (RAZORPAY_MODE === 'test' && razorpayKeyMode === 'live'))
+);
 const hasRazorpay = Boolean(RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) &&
   !isPlaceholderKey(RAZORPAY_KEY_ID) &&
-  !isPlaceholderKey(RAZORPAY_KEY_SECRET);
+  !isPlaceholderKey(RAZORPAY_KEY_SECRET) &&
+  !razorpayModeMismatch;
 const razorpayClient = hasRazorpay
   ? new Razorpay({ key_id: RAZORPAY_KEY_ID, key_secret: RAZORPAY_KEY_SECRET })
   : null;
+
+function getRazorpayConfigError() {
+  if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET || isPlaceholderKey(RAZORPAY_KEY_ID) || isPlaceholderKey(RAZORPAY_KEY_SECRET)) {
+    return 'Payment gateway not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.';
+  }
+  if (razorpayModeMismatch) {
+    return `Razorpay mode mismatch. RAZORPAY_MODE=${RAZORPAY_MODE} but key id looks like ${razorpayKeyMode || 'unknown'} mode.`;
+  }
+  return '';
+}
 
 // Cloudinary configuration (for product image uploads)
 const CLOUDINARY_CLOUD_NAME = (process.env.CLOUDINARY_CLOUD_NAME || '').trim();
@@ -1538,7 +1558,7 @@ function buildRazorpayReceipt(cartId = '') {
 
 app.post('/payments/create-order', async (req, res) => {
   if (!hasRazorpay) {
-    return res.status(503).json({ error: 'Payment gateway not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env.' });
+    return res.status(503).json({ error: getRazorpayConfigError() || 'Payment gateway not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env.' });
   }
 
   try {
@@ -2119,6 +2139,7 @@ app.listen(PORT, () => {
   console.log(' Status: Running');
   console.log(` Port: ${PORT}`);
   console.log(` URL: http://localhost:${PORT}`);
-  console.log(` Razorpay enabled: ${hasRazorpay ? 'yes' : 'no (set keys in .env)'}`);
+  console.log(` Razorpay mode: ${RAZORPAY_MODE}`);
+  console.log(` Razorpay enabled: ${hasRazorpay ? 'yes' : `no (${getRazorpayConfigError() || 'set keys in .env'})`}`);
   console.log('??????????????????????????????');
 });
